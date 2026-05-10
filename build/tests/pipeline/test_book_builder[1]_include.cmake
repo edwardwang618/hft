@@ -1,5 +1,0 @@
-if(EXISTS "/home/debian/hft/build/tests/pipeline/test_book_builder[1]_tests.cmake")
-  include("/home/debian/hft/build/tests/pipeline/test_book_builder[1]_tests.cmake")
-else()
-  add_test(test_book_builder_NOT_BUILT test_book_builder_NOT_BUILT)
-endif()

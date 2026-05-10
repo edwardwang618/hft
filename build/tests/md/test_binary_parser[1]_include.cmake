@@ -1,5 +1,0 @@
-if(EXISTS "/home/debian/hft/build/tests/md/test_binary_parser[1]_tests.cmake")
-  include("/home/debian/hft/build/tests/md/test_binary_parser[1]_tests.cmake")
-else()
-  add_test(test_binary_parser_NOT_BUILT test_binary_parser_NOT_BUILT)
-endif()
