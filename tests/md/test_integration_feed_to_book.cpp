@@ -47,7 +47,7 @@ TEST(FeedToBook, MultipleAddsReflectInBook) {
   });
 
   Pipe pipe;
-  hft::md::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
   EXPECT_EQ(fh.msgs_parsed(), 4u);
@@ -73,7 +73,7 @@ TEST(FeedToBook, AddReduceCancelLifecycle) {
   });
 
   Pipe pipe;
-  hft::md::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
   EXPECT_EQ(fh.msgs_parsed(), 3u);
@@ -97,11 +97,11 @@ TEST(FeedToBook, ChunkingDoesNotAffectFinalBookState) {
   });
 
   Pipe whole;
-  hft::md::FeedHandler<Pipe> whole_fh(whole);
+  hft::pipeline::FeedHandler<Pipe> whole_fh(whole);
   whole_fh.on_bytes(bytes.data(), bytes.size());
 
   Pipe drip;
-  hft::md::FeedHandler<Pipe> drip_fh(drip);
+  hft::pipeline::FeedHandler<Pipe> drip_fh(drip);
   for (const auto &b : bytes)
     drip_fh.on_bytes(&b, 1);
 
@@ -128,7 +128,7 @@ TEST(FeedToBook, GarbageInMiddleDoesNotCorruptBook) {
   auto post = make_add(0, 2, 1, 2, Side::Sell, 100100, 150);
 
   Pipe pipe;
-  hft::md::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe> fh(pipe);
   fh.on_bytes(pre.data(), pre.size());
   fh.on_bytes(garbage.data(), garbage.size());
   fh.on_bytes(post.data(), post.size());
@@ -154,7 +154,7 @@ TEST(FeedToBook, MultiSymbolIsolation) {
   });
 
   Pipe pipe;
-  hft::md::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
   ASSERT_EQ(pipe.books().size(), 2u);

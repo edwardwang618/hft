@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace hft::md {
+namespace hft::pipeline {
 
 template <class Sink> class FeedHandler {
 public:
@@ -23,7 +23,7 @@ public:
 private:
   Sink &sink_;
   std::vector<std::byte> buf_;
-  BinaryParser parser_; // 如果你的 parser 是无状态的, 这个可以去掉, 直接静态调
+  md::BinaryParser parser_; // 如果你的 parser 是无状态的, 这个可以去掉, 直接静态调
   std::uint64_t msgs_ = 0;
   std::uint64_t bytes_ = 0;
   std::uint64_t corrupt_ = 0;
@@ -40,12 +40,12 @@ void FeedHandler<Sink>::on_bytes(const std::byte *data, std::size_t n) {
   std::size_t offset = 0;
   while (true) {
     std::span<const std::byte> view{buf_.data() + offset, buf_.size() - offset};
-    ParseResult r = parser_.parse(view);
+    md::ParseResult r = parser_.parse(view);
 
-    if (r.status == ParseResult::NeedMore) {
+    if (r.status == md::ParseResult::NeedMore) {
       break;
     }
-    if (r.status == ParseResult::Ok) {
+    if (r.status == md::ParseResult::Ok) {
       sink_.on_md(r.seq, r.event.value());
       offset += r.consumed;
       msgs_++;

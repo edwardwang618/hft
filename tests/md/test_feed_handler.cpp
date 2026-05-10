@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <cstring>
 #include <gtest/gtest.h>
-#include <hft/pipeline/feed_handler.hpp>
 #include <hft/md/wire_binary.hpp>
+#include <hft/pipeline/feed_handler.hpp>
 #include <span>
 #include <variant>
 #include <vector>
@@ -90,7 +90,7 @@ struct CollectingSink {
 // ================================================================
 TEST(FeedHandler, SingleCompleteMessage) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   auto b = make_add(/*ts*/ 1000, /*sym*/ 42, /*id*/ 7,
                     /*side*/ 0, /*px*/ 12345, /*qty*/ 10);
@@ -117,7 +117,7 @@ TEST(FeedHandler, SingleCompleteMessage) {
 // ================================================================
 TEST(FeedHandler, SplitAcrossTwoChunks) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   auto b = make_add(1000, 42, 7, 0, 12345, 10);
   ASSERT_GT(b.size(), 1u);
@@ -142,7 +142,7 @@ TEST(FeedHandler, SplitAcrossTwoChunks) {
 // ================================================================
 TEST(FeedHandler, ThreeMessagesInOneChunk) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   auto all = concat({
       make_add(1, 42, 100, 0, 100, 5),
@@ -173,7 +173,7 @@ TEST(FeedHandler, ThreeMessagesInOneChunk) {
 // ================================================================
 TEST(FeedHandler, OneFullPlusPartial) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   auto m1 = make_add(1, 42, 100, 0, 100, 5);
   auto m2 = make_add(2, 42, 101, 0, 200, 10);
@@ -205,7 +205,7 @@ TEST(FeedHandler, OneFullPlusPartial) {
 // ================================================================
 TEST(FeedHandler, OneByteAtATime) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   auto all = concat({
       make_add(1, 42, 100, 0, 100, 5),
@@ -233,7 +233,7 @@ TEST(FeedHandler, OneByteAtATime) {
 // ================================================================
 TEST(FeedHandler, CorruptAfterGoodMessage) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   auto good = make_add(1, 42, 100, 0, 100, 5);
 
@@ -259,7 +259,7 @@ TEST(FeedHandler, CorruptAfterGoodMessage) {
 // ================================================================
 TEST(FeedHandler, EmptyCall) {
   CollectingSink sink;
-  FeedHandler<CollectingSink> fh(sink);
+  pipeline::FeedHandler<CollectingSink> fh(sink);
 
   fh.on_bytes(nullptr, 0);
   EXPECT_EQ(sink.events.size(), 0u);
