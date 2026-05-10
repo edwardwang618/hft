@@ -116,3 +116,4 @@ TEST(BinaryParser, TwoMessagesInOneBuffer) {
   ASSERT_EQ(r2.status, ParseResult::Ok);
   EXPECT_TRUE(std::holds_alternative<Clear>(*r2.event));
 }
+

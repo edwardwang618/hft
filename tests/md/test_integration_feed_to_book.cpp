@@ -40,10 +40,10 @@ const hft::core::OrderBook &book_at(const Pipe &p, hft::md::SymbolId s) {
 //    book 最终状态应反映最佳买卖价和各档数量.
 TEST(FeedToBook, MultipleAddsReflectInBook) {
   auto bytes = concat({
-      make_add(1, 1, 101, Side::Buy, 100000, 100),
-      make_add(2, 1, 102, Side::Buy, 99900, 200),
-      make_add(3, 1, 201, Side::Sell, 100100, 150),
-      make_add(4, 1, 202, Side::Sell, 100200, 50),
+      make_add(0, 1, 1, 101, Side::Buy, 100000, 100),
+      make_add(0, 2, 1, 102, Side::Buy, 99900, 200),
+      make_add(0, 3, 1, 201, Side::Sell, 100100, 150),
+      make_add(0, 4, 1, 202, Side::Sell, 100200, 50),
   });
 
   Pipe pipe;
@@ -67,9 +67,9 @@ TEST(FeedToBook, MultipleAddsReflectInBook) {
 // 2. 生命周期: Add → Reduce → Cancel, book 最终为空.
 TEST(FeedToBook, AddReduceCancelLifecycle) {
   auto bytes = concat({
-      make_add(1, 1, 1, Side::Buy, 100000, 100),
-      make_reduce(2, 1, 1, /*new_qty=*/40),
-      make_cancel(3, 1, 1),
+      make_add(0, 1, 1, 1, Side::Buy, 100000, 100),
+      make_reduce(0, 2, 1, 1, /*new_qty=*/40),
+      make_cancel(0, 3, 1, 1),
   });
 
   Pipe pipe;
@@ -89,11 +89,11 @@ TEST(FeedToBook, AddReduceCancelLifecycle) {
 //    这是 feed handler 分片语义对下游 book state 的契约.
 TEST(FeedToBook, ChunkingDoesNotAffectFinalBookState) {
   auto bytes = concat({
-      make_add(1, 1, 1, Side::Buy, 100000, 100),
-      make_add(2, 1, 2, Side::Sell, 100100, 150),
-      make_reduce(3, 1, 2, /*new_qty=*/50),
-      make_add(4, 1, 3, Side::Buy, 99900, 200),
-      make_cancel(5, 1, 1),
+      make_add(0, 1, 1, 1, Side::Buy, 100000, 100),
+      make_add(0, 2, 1, 2, Side::Sell, 100100, 150),
+      make_reduce(0, 3, 1, 2, /*new_qty=*/50),
+      make_add(0, 4, 1, 3, Side::Buy, 99900, 200),
+      make_cancel(0, 5, 1, 1),
   });
 
   Pipe whole;
@@ -123,9 +123,9 @@ TEST(FeedToBook, ChunkingDoesNotAffectFinalBookState) {
 
 // 4. 中间塞垃圾: 不能污染 book, 前后合法帧都要落 book, corrupt 计数 >= 1.
 TEST(FeedToBook, GarbageInMiddleDoesNotCorruptBook) {
-  auto pre = make_add(1, 1, 1, Side::Buy, 100000, 100);
+  auto pre = make_add(0, 1, 1, 1, Side::Buy, 100000, 100);
   std::vector<std::byte> garbage(32, std::byte{0xFF});
-  auto post = make_add(2, 1, 2, Side::Sell, 100100, 150);
+  auto post = make_add(0, 2, 1, 2, Side::Sell, 100100, 150);
 
   Pipe pipe;
   hft::md::FeedHandler<Pipe> fh(pipe);
@@ -147,10 +147,10 @@ TEST(FeedToBook, GarbageInMiddleDoesNotCorruptBook) {
 // 5. 多 symbol 隔离: 混流输入, 两个 book 各自独立.
 TEST(FeedToBook, MultiSymbolIsolation) {
   auto bytes = concat({
-      make_add(1, 1, 11, Side::Buy, 100000, 100),
-      make_add(2, 2, 21, Side::Sell, 200000, 50),
-      make_add(3, 1, 12, Side::Sell, 100100, 80),
-      make_add(4, 2, 22, Side::Buy, 199900, 30),
+      make_add(0, 1, 1, 11, Side::Buy, 100000, 100),
+      make_add(0, 2, 2, 21, Side::Sell, 200000, 50),
+      make_add(0, 3, 1, 12, Side::Sell, 100100, 80),
+      make_add(0, 4, 2, 22, Side::Buy, 199900, 30),
   });
 
   Pipe pipe;

@@ -12,9 +12,10 @@ Buf enc_header(uint8_t type, uint64_t seq) {
   return b;
 }
 
-std::vector<std::byte> make_add(hft::Ts ts, hft::SymbolId sym, hft::OrderId id,
-                                hft::Side side, hft::Price px, hft::Qty qty) {
-  auto b = enc_header(hft::md::wire::kAdd);
+std::vector<std::byte> make_add(uint64_t seq, hft::Ts ts, hft::SymbolId sym,
+                                hft::OrderId id, hft::Side side, hft::Price px,
+                                hft::Qty qty) {
+  auto b = enc_header(hft::md::wire::kAdd, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.put<uint64_t>(id);
@@ -25,9 +26,9 @@ std::vector<std::byte> make_add(hft::Ts ts, hft::SymbolId sym, hft::OrderId id,
   return std::move(b.data);
 }
 
-std::vector<std::byte> make_cancel(hft::Ts ts, hft::SymbolId sym,
+std::vector<std::byte> make_cancel(uint64_t seq, hft::Ts ts, hft::SymbolId sym,
                                    hft::OrderId id) {
-  auto b = enc_header(hft::md::wire::kCancel);
+  auto b = enc_header(hft::md::wire::kCancel, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.put<uint64_t>(id);
@@ -35,9 +36,9 @@ std::vector<std::byte> make_cancel(hft::Ts ts, hft::SymbolId sym,
   return std::move(b.data);
 }
 
-std::vector<std::byte> make_reduce(hft::Ts ts, hft::SymbolId sym,
+std::vector<std::byte> make_reduce(uint64_t seq, hft::Ts ts, hft::SymbolId sym,
                                    hft::OrderId id, hft::Qty new_qty) {
-  auto b = enc_header(hft::md::wire::kReduce);
+  auto b = enc_header(hft::md::wire::kReduce, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.put<uint64_t>(id);
@@ -46,10 +47,10 @@ std::vector<std::byte> make_reduce(hft::Ts ts, hft::SymbolId sym,
   return std::move(b.data);
 }
 
-std::vector<std::byte> make_exec(hft::Ts ts, hft::SymbolId sym, hft::OrderId id,
-                                 hft::Qty exec_qty, hft::Price px,
-                                 hft::md::TradeId trade_id) {
-  auto b = enc_header(hft::md::wire::kExec);
+std::vector<std::byte> make_exec(uint64_t seq, hft::Ts ts, hft::SymbolId sym,
+                                 hft::OrderId id, hft::Qty exec_qty,
+                                 hft::Price px, hft::md::TradeId trade_id) {
+  auto b = enc_header(hft::md::wire::kExec, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.put<uint64_t>(id);
@@ -60,11 +61,11 @@ std::vector<std::byte> make_exec(hft::Ts ts, hft::SymbolId sym, hft::OrderId id,
   return std::move(b.data);
 }
 
-std::vector<std::byte> make_replace(hft::Ts ts, hft::SymbolId sym,
+std::vector<std::byte> make_replace(uint64_t seq, hft::Ts ts, hft::SymbolId sym,
                                     hft::OrderId old_id, hft::OrderId new_id,
                                     hft::Side side, hft::Price px,
                                     hft::Qty qty) {
-  auto b = enc_header(hft::md::wire::kReplace);
+  auto b = enc_header(hft::md::wire::kReplace, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.put<uint64_t>(old_id);
@@ -76,9 +77,10 @@ std::vector<std::byte> make_replace(hft::Ts ts, hft::SymbolId sym,
   return std::move(b.data);
 }
 
-std::vector<std::byte> make_trade(hft::Ts ts, hft::SymbolId sym, hft::Price px,
-                                  hft::Qty qty, hft::md::TradeId trade_id) {
-  auto b = enc_header(hft::md::wire::kTrade);
+std::vector<std::byte> make_trade(uint64_t seq, hft::Ts ts, hft::SymbolId sym,
+                                  hft::Price px, hft::Qty qty,
+                                  hft::md::TradeId trade_id) {
+  auto b = enc_header(hft::md::wire::kTrade, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.put<int64_t>(px);
@@ -88,8 +90,8 @@ std::vector<std::byte> make_trade(hft::Ts ts, hft::SymbolId sym, hft::Price px,
   return std::move(b.data);
 }
 
-std::vector<std::byte> make_clear(hft::Ts ts, hft::SymbolId sym) {
-  auto b = enc_header(hft::md::wire::kClear);
+std::vector<std::byte> make_clear(uint64_t seq, hft::Ts ts, hft::SymbolId sym) {
+  auto b = enc_header(hft::md::wire::kClear, seq);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
   b.patch_len();
