@@ -17,9 +17,10 @@
 //   Cancel  : ts:u64 sym:u32 id:u64                                     (20 B)
 //   Reduce  : ts:u64 sym:u32 id:u64 new_qty:i64                         (28 B)
 //   Exec    : ts:u64 sym:u32 id:u64 exec_qty:i64 px:i64 trade_id:u64    (44 B)
-//   Replace : ts:u64 sym:u32 old_id:u64 new_id:u64 side:u8 px:i64 qty:i64 (45 B)
-//   Trade   : ts:u64 sym:u32 px:i64 qty:i64 trade_id:u64                (36 B)
-//   Clear   : ts:u64 sym:u32                                            (12 B)
+//   Replace : ts:u64 sym:u32 old_id:u64 new_id:u64 side:u8 px:i64 qty:i64 (45
+//   B) Trade   : ts:u64 sym:u32 px:i64 qty:i64 trade_id:u64                (36
+//   B) Clear   : ts:u64 sym:u32                                            (12
+//   B)
 // ============================================================================
 
 namespace hft::md::wire {
@@ -39,8 +40,9 @@ struct Header {
   uint8_t msg_type;
   uint8_t _reserved;
   uint16_t msg_len;
+  uint64_t seq;
 };
-static_assert(sizeof(Header) == 4);
+static_assert(sizeof(Header) == 12);
 #pragma pack(pop)
 
 } // namespace hft::md::wire

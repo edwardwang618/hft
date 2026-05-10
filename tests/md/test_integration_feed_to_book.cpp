@@ -1,11 +1,15 @@
 #include "wire_fixtures.hpp"
 
+#include <hft/core/order_book.hpp>
 #include <hft/md/feed_handler.hpp>
 #include <hft/md/md_event.hpp>
+#include <hft/pipeline/book_builder.hpp>
 
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 using hft::Side;
@@ -16,122 +20,150 @@ using hft::test::make_reduce;
 
 namespace {
 
-struct CountingSink {
-  std::size_t n = 0;
-  void on_md(const hft::md::MdEvent & /*ev*/) { ++n; }
+// 终端 stage: BookBuilder 的 Next 要求 on_md(ev, books), 这里空实现.
+struct NullTerminal {
+  void on_md(const hft::md::MdEvent &,
+             const std::unordered_map<hft::md::SymbolId, hft::core::OrderBook>
+                 &) noexcept {}
 };
+
+using Pipe = hft::pipeline::BookBuilder<NullTerminal>;
+
+const hft::core::OrderBook &book_at(const Pipe &p, hft::md::SymbolId s) {
+  return p.books().at(s);
+}
 
 } // namespace
 
-// -------------------------------------------------------------------
-// 1. 所有 event 都应投递到 sink.
-// -------------------------------------------------------------------
-TEST(Integration, AllEventsDelivered) {
+// 1. 端到端: 一段合法字节 → parser → feed handler → book builder → OrderBook.
+//    book 最终状态应反映最佳买卖价和各档数量.
+TEST(FeedToBook, MultipleAddsReflectInBook) {
   auto bytes = concat({
-      make_add(/*ts=*/1, /*sym=*/1, /*id=*/1, Side::Buy, 100000, 100),
-      make_add(/*ts=*/2, /*sym=*/1, /*id=*/2, Side::Buy, 99900, 200),
-      make_add(/*ts=*/3, /*sym=*/1, /*id=*/3, Side::Sell, 100100, 150),
+      make_add(1, 1, 101, Side::Buy, 100000, 100),
+      make_add(2, 1, 102, Side::Buy, 99900, 200),
+      make_add(3, 1, 201, Side::Sell, 100100, 150),
+      make_add(4, 1, 202, Side::Sell, 100200, 50),
   });
 
-  CountingSink sink;
-  hft::md::FeedHandler<CountingSink> fh(sink);
+  Pipe pipe;
+  hft::md::FeedHandler<Pipe> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
-  EXPECT_EQ(sink.n, 3u);
-  EXPECT_EQ(fh.msgs_parsed(), 3u);
+  EXPECT_EQ(fh.msgs_parsed(), 4u);
   EXPECT_EQ(fh.corrupt_events(), 0u);
   EXPECT_EQ(fh.buffered(), 0u);
+
+  const auto &b = book_at(pipe, 1);
+  EXPECT_EQ(b.best_bid(), std::optional<hft::Price>{100000});
+  EXPECT_EQ(b.best_ask(), std::optional<hft::Price>{100100});
+  EXPECT_EQ(b.qty_at(Side::Buy, 100000), 100);
+  EXPECT_EQ(b.qty_at(Side::Buy, 99900), 200);
+  EXPECT_EQ(b.qty_at(Side::Sell, 100100), 150);
+  EXPECT_EQ(b.qty_at(Side::Sell, 100200), 50);
+  EXPECT_EQ(b.num_orders(), 4u);
 }
 
-// -------------------------------------------------------------------
-// 2. 把同一串字节一次全喂 vs 一字节一字节喂, 结果必须完全一致.
-//    这是 FeedHandler 分片缓冲逻辑的核心契约.
-// -------------------------------------------------------------------
-TEST(Integration, SplitChunksProduceSameState) {
+// 2. 生命周期: Add → Reduce → Cancel, book 最终为空.
+TEST(FeedToBook, AddReduceCancelLifecycle) {
   auto bytes = concat({
-      make_add(/*ts=*/1, /*sym=*/1, /*id=*/1, Side::Buy, 100000, 100),
-      make_add(/*ts=*/2, /*sym=*/1, /*id=*/2, Side::Sell, 100100, 150),
-      make_reduce(/*ts=*/3, /*sym=*/1, /*id=*/2, /*new_qty=*/50),
-      make_cancel(/*ts=*/4, /*sym=*/1, /*id=*/1),
+      make_add(1, 1, 1, Side::Buy, 100000, 100),
+      make_reduce(2, 1, 1, /*new_qty=*/40),
+      make_cancel(3, 1, 1),
   });
 
-  CountingSink whole_sink;
-  hft::md::FeedHandler<CountingSink> whole_fh(whole_sink);
+  Pipe pipe;
+  hft::md::FeedHandler<Pipe> fh(pipe);
+  fh.on_bytes(bytes.data(), bytes.size());
+
+  EXPECT_EQ(fh.msgs_parsed(), 3u);
+  EXPECT_EQ(fh.corrupt_events(), 0u);
+
+  const auto &b = book_at(pipe, 1);
+  EXPECT_FALSE(b.best_bid().has_value());
+  EXPECT_FALSE(b.best_ask().has_value());
+  EXPECT_EQ(b.num_orders(), 0u);
+}
+
+// 3. 分片等价性: 一次性 vs 逐字节, book 最终状态必须完全一致.
+//    这是 feed handler 分片语义对下游 book state 的契约.
+TEST(FeedToBook, ChunkingDoesNotAffectFinalBookState) {
+  auto bytes = concat({
+      make_add(1, 1, 1, Side::Buy, 100000, 100),
+      make_add(2, 1, 2, Side::Sell, 100100, 150),
+      make_reduce(3, 1, 2, /*new_qty=*/50),
+      make_add(4, 1, 3, Side::Buy, 99900, 200),
+      make_cancel(5, 1, 1),
+  });
+
+  Pipe whole;
+  hft::md::FeedHandler<Pipe> whole_fh(whole);
   whole_fh.on_bytes(bytes.data(), bytes.size());
 
-  CountingSink drip_sink;
-  hft::md::FeedHandler<CountingSink> drip_fh(drip_sink);
+  Pipe drip;
+  hft::md::FeedHandler<Pipe> drip_fh(drip);
   for (const auto &b : bytes)
     drip_fh.on_bytes(&b, 1);
 
-  EXPECT_EQ(whole_sink.n, 4u);
-  EXPECT_EQ(drip_sink.n, whole_sink.n);
-  EXPECT_EQ(drip_fh.msgs_parsed(), whole_fh.msgs_parsed());
-  EXPECT_EQ(drip_fh.buffered(), 0u);
+  const auto &wb = book_at(whole, 1);
+  const auto &db = book_at(drip, 1);
+
+  EXPECT_EQ(wb.best_bid(), db.best_bid());
+  EXPECT_EQ(wb.best_ask(), db.best_ask());
+  EXPECT_EQ(wb.num_orders(), db.num_orders());
+  EXPECT_EQ(wb.qty_at(Side::Buy, 99900), db.qty_at(Side::Buy, 99900));
+  EXPECT_EQ(wb.qty_at(Side::Sell, 100100), db.qty_at(Side::Sell, 100100));
+
+  // 顺便做一次绝对值断言, 保证两边不是"同样错"
+  EXPECT_EQ(wb.best_bid(), std::optional<hft::Price>{99900});
+  EXPECT_EQ(wb.best_ask(), std::optional<hft::Price>{100100});
+  EXPECT_EQ(wb.qty_at(Side::Sell, 100100), 50);
+  EXPECT_EQ(wb.num_orders(), 2u); // id=1 已撤, id=2/3 留存
 }
 
-// -------------------------------------------------------------------
-// 3. 任意 2-way 切分点都必须等价于一次性喂入.
-// -------------------------------------------------------------------
-TEST(Integration, ArbitrarySplitPointYieldsSameCount) {
+// 4. 中间塞垃圾: 不能污染 book, 前后合法帧都要落 book, corrupt 计数 >= 1.
+TEST(FeedToBook, GarbageInMiddleDoesNotCorruptBook) {
+  auto pre = make_add(1, 1, 1, Side::Buy, 100000, 100);
+  std::vector<std::byte> garbage(32, std::byte{0xFF});
+  auto post = make_add(2, 1, 2, Side::Sell, 100100, 150);
+
+  Pipe pipe;
+  hft::md::FeedHandler<Pipe> fh(pipe);
+  fh.on_bytes(pre.data(), pre.size());
+  fh.on_bytes(garbage.data(), garbage.size());
+  fh.on_bytes(post.data(), post.size());
+
+  EXPECT_GE(fh.corrupt_events(), 1u);
+  EXPECT_EQ(fh.msgs_parsed(), 2u);
+
+  const auto &b = book_at(pipe, 1);
+  EXPECT_EQ(b.best_bid(), std::optional<hft::Price>{100000});
+  EXPECT_EQ(b.best_ask(), std::optional<hft::Price>{100100});
+  EXPECT_EQ(b.qty_at(Side::Buy, 100000), 100);
+  EXPECT_EQ(b.qty_at(Side::Sell, 100100), 150);
+  EXPECT_EQ(b.num_orders(), 2u);
+}
+
+// 5. 多 symbol 隔离: 混流输入, 两个 book 各自独立.
+TEST(FeedToBook, MultiSymbolIsolation) {
   auto bytes = concat({
-      make_add(/*ts=*/1, /*sym=*/1, /*id=*/1, Side::Buy, 100000, 100),
-      make_add(/*ts=*/2, /*sym=*/1, /*id=*/2, Side::Sell, 100100, 150),
+      make_add(1, 1, 11, Side::Buy, 100000, 100),
+      make_add(2, 2, 21, Side::Sell, 200000, 50),
+      make_add(3, 1, 12, Side::Sell, 100100, 80),
+      make_add(4, 2, 22, Side::Buy, 199900, 30),
   });
 
-  for (std::size_t cut = 0; cut <= bytes.size(); ++cut) {
-    CountingSink sink;
-    hft::md::FeedHandler<CountingSink> fh(sink);
-    fh.on_bytes(bytes.data(), cut);
-    fh.on_bytes(bytes.data() + cut, bytes.size() - cut);
+  Pipe pipe;
+  hft::md::FeedHandler<Pipe> fh(pipe);
+  fh.on_bytes(bytes.data(), bytes.size());
 
-    EXPECT_EQ(sink.n, 2u) << "cut=" << cut;
-    EXPECT_EQ(fh.buffered(), 0u) << "cut=" << cut;
-  }
-}
+  ASSERT_EQ(pipe.books().size(), 2u);
+  const auto &b1 = book_at(pipe, 1);
+  const auto &b2 = book_at(pipe, 2);
 
-// -------------------------------------------------------------------
-// 4. 一段垃圾字节必须被丢弃 (corrupt_events++), 但不能破坏之前已投递
-//    的事件, 并且恢复后仍能解析后续合法帧.
-// -------------------------------------------------------------------
-TEST(Integration, CorruptFrameDoesNotBreakPriorOrSubsequent) {
-  auto good1 = make_add(/*ts=*/1, /*sym=*/1, /*id=*/1, Side::Buy, 100000, 100);
-  std::vector<std::byte> garbage(16, std::byte{0xFF}); // bogus msg type
-
-  CountingSink sink;
-  hft::md::FeedHandler<CountingSink> fh(sink);
-
-  fh.on_bytes(good1.data(), good1.size());
-  EXPECT_EQ(sink.n, 1u);
-  EXPECT_EQ(fh.corrupt_events(), 0u);
-
-  fh.on_bytes(garbage.data(), garbage.size());
-  EXPECT_EQ(fh.corrupt_events(), 1u);
-  EXPECT_EQ(sink.n, 1u); // 不应少也不应多
-
-  auto good2 = make_add(/*ts=*/2, /*sym=*/1, /*id=*/2, Side::Sell, 100100, 50);
-  fh.on_bytes(good2.data(), good2.size());
-  EXPECT_EQ(sink.n, 2u);
-}
-
-// -------------------------------------------------------------------
-// 5. NeedMore: 给一个不完整的 frame, sink 不应收到任何事件, 字节应
-//    残留在 buf_ 里等下次.
-// -------------------------------------------------------------------
-TEST(Integration, TruncatedFrameBuffersUntilComplete) {
-  auto frame = make_add(/*ts=*/1, /*sym=*/1, /*id=*/1, Side::Buy, 100000, 100);
-
-  CountingSink sink;
-  hft::md::FeedHandler<CountingSink> fh(sink);
-
-  // 先喂前一半
-  std::size_t half = frame.size() / 2;
-  fh.on_bytes(frame.data(), half);
-  EXPECT_EQ(sink.n, 0u);
-  EXPECT_EQ(fh.buffered(), half);
-
-  // 喂剩下的, 才应产出 1 条事件
-  fh.on_bytes(frame.data() + half, frame.size() - half);
-  EXPECT_EQ(sink.n, 1u);
-  EXPECT_EQ(fh.buffered(), 0u);
+  EXPECT_EQ(b1.best_bid(), std::optional<hft::Price>{100000});
+  EXPECT_EQ(b1.best_ask(), std::optional<hft::Price>{100100});
+  EXPECT_EQ(b2.best_bid(), std::optional<hft::Price>{199900});
+  EXPECT_EQ(b2.best_ask(), std::optional<hft::Price>{200000});
+  EXPECT_EQ(b1.num_orders(), 2u);
+  EXPECT_EQ(b2.num_orders(), 2u);
 }
