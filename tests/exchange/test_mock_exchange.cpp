@@ -2,7 +2,7 @@
 #include <hft/exchange/binary_serializer.hpp>
 #include <hft/exchange/byte_sink.hpp>
 #include <hft/exchange/mock_exchange.hpp>
-#include <hft/md/feed_handler.hpp>
+#include <hft/pipeline/feed_handler.hpp>
 
 using namespace hft;
 

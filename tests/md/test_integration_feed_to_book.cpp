@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <hft/core/order_book.hpp>
-#include <hft/md/feed_handler.hpp>
+#include <hft/pipeline/feed_handler.hpp>
 #include <hft/md/md_event.hpp>
 #include <hft/pipeline/book_builder.hpp>
 

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <gtest/gtest.h>
-#include <hft/md/feed_handler.hpp>
+#include <hft/pipeline/feed_handler.hpp>
 #include <hft/md/wire_binary.hpp>
 #include <span>
 #include <variant>
