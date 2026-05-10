@@ -46,7 +46,7 @@ void FeedHandler<Sink>::on_bytes(const std::byte *data, std::size_t n) {
       break;
     }
     if (r.status == ParseResult::Ok) {
-      sink_.on_md(r.event.value());
+      sink_.on_md(r.seq, r.event.value());
       offset += r.consumed;
       msgs_++;
       continue;

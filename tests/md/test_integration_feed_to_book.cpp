@@ -1,5 +1,6 @@
 #include "wire_fixtures.hpp"
 
+#include <cstdint>
 #include <hft/core/order_book.hpp>
 #include <hft/md/feed_handler.hpp>
 #include <hft/md/md_event.hpp>
@@ -22,7 +23,7 @@ namespace {
 
 // 终端 stage: BookBuilder 的 Next 要求 on_md(ev, books), 这里空实现.
 struct NullTerminal {
-  void on_md(const hft::md::MdEvent &,
+  void on_md(std::uint64_t, const hft::md::MdEvent &,
              const std::unordered_map<hft::md::SymbolId, hft::core::OrderBook>
                  &) noexcept {}
 };

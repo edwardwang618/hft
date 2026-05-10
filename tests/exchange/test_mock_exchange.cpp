@@ -20,7 +20,7 @@ struct RecordingSink {
 TEST(MockExchange, ScriptedRoundTripBinary) {
   RecordingSink rec;
   md::FeedHandler fh{rec}; // 假设已改成新签名
-  exchange::DirectSink<md::FeedHandler> sink{fh};
+  exchange::DirectSink sink{fh};
   exchange::BinarySerializer ser;
   exchange::MockExchange mx{sink, ser, /*start_seq=*/100};
 

@@ -1,5 +1,3 @@
-# tests/md/CMakeLists.txt
-
 add_executable(test_mock_exchange
   test_mock_exchange.cpp
 )

@@ -18,9 +18,9 @@ public:
   template <class... A>
   explicit BookBuilder(A &&...a) : next_(std::forward<A>(a)...) {}
 
-  void on_md(const md::MdEvent &e) noexcept {
+  void on_md(std::uint64_t seq, const md::MdEvent &e) noexcept {
     std::visit([this](const auto &ev) { apply(ev); }, e);
-    next_.on_md(e, books_);
+    next_.on_md(seq, e, books_);
   }
 
   const BookMap &books() const noexcept { return books_; }

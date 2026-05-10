@@ -79,7 +79,7 @@ private:
         !read(b, side_raw) || !read(b, ev.px) || !read(b, ev.qty) || !b.empty())
       return ParseResult::error(h.msg_len);
     ev.side = static_cast<Side>(side_raw);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 
   static ParseResult decode_cancel(const wire::Header &h,
@@ -87,7 +87,7 @@ private:
     Cancel ev{};
     if (!read(b, ev.ts) || !read(b, ev.sym) || !read(b, ev.id) || !b.empty())
       return ParseResult::error(h.msg_len);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 
   static ParseResult decode_reduce(const wire::Header &h,
@@ -96,7 +96,7 @@ private:
     if (!read(b, ev.ts) || !read(b, ev.sym) || !read(b, ev.id) ||
         !read(b, ev.new_qty) || !b.empty())
       return ParseResult::error(h.msg_len);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 
   static ParseResult decode_exec(const wire::Header &h,
@@ -106,7 +106,7 @@ private:
         !read(b, ev.exec_qty) || !read(b, ev.px) || !read(b, ev.trade_id) ||
         !b.empty())
       return ParseResult::error(h.msg_len);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 
   static ParseResult decode_replace(const wire::Header &h,
@@ -118,7 +118,7 @@ private:
         !read(b, ev.qty) || !b.empty())
       return ParseResult::error(h.msg_len);
     ev.side = static_cast<Side>(side_raw);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 
   static ParseResult decode_trade(const wire::Header &h,
@@ -127,7 +127,7 @@ private:
     if (!read(b, ev.ts) || !read(b, ev.sym) || !read(b, ev.px) ||
         !read(b, ev.qty) || !read(b, ev.trade_id) || !b.empty())
       return ParseResult::error(h.msg_len);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 
   static ParseResult decode_clear(const wire::Header &h,
@@ -135,7 +135,7 @@ private:
     Clear ev{};
     if (!read(b, ev.ts) || !read(b, ev.sym) || !b.empty())
       return ParseResult::error(h.msg_len);
-    return ParseResult::ok(h.msg_len, ev);
+    return ParseResult::ok(h.msg_len, ev, h.seq);
   }
 };
 

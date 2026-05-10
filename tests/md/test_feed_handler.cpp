@@ -80,7 +80,7 @@ std::vector<std::byte> concat(std::initializer_list<Buf> bufs) {
 // collecting sink
 struct CollectingSink {
   std::vector<MdEvent> events;
-  void on_md(const MdEvent &e) { events.push_back(e); }
+  void on_md(std::uint64_t /*seq*/, const MdEvent &e) { events.push_back(e); }
 };
 
 } // namespace

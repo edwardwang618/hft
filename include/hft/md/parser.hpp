@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <cstdint>
 #include <hft/md/md_event.hpp>
 #include <optional>
 #include <span>
@@ -11,10 +12,13 @@ struct ParseResult {
   Status status = NeedMore;
   size_t consumed = 0;
   std::optional<MdEvent> event;
+  std::uint64_t seq = 0;
 
   static ParseResult need_more() { return {NeedMore, 0, std::nullopt}; }
   static ParseResult error(size_t c = 0) { return {Error, c, std::nullopt}; }
-  static ParseResult ok(size_t c, MdEvent e) { return {Ok, c, std::move(e)}; }
+  static ParseResult ok(size_t c, MdEvent e, std::uint64_t seq) {
+    return {Ok, c, std::move(e), seq};
+  }
 };
 
 class IParser {
