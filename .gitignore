@@ -1,0 +1,94 @@
+# ==== Build output ====
+build/
+build-*/
+out/
+cmake-build-*/          # CLion 默认
+
+# ==== CMake 生成物 ====
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+Testing/
+_deps/
+compile_commands.json   # 如果你把它软链到根目录,就忽略
+.cmake/
+
+# ==== 编译产物 ====
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.d                     # 依赖文件
+*.gch                   # 预编译头
+*.pch
+
+# ==== clangd / LSP 缓存 ====
+.cache/
+.clangd/                # 注意:文件 .clangd 要保留,目录 .clangd/ 忽略
+
+# ==== 日志 / 临时 ====
+*.log
+build.log
+*.tmp
+*.swp
+*.swo
+*~
+core
+core.*
+
+# ==== 测试覆盖率 ====
+*.gcno
+*.gcda
+*.gcov
+coverage/
+*.profraw
+*.profdata
+
+# ==== Sanitizer / perf ====
+*.asan
+perf.data
+perf.data.old
+flamegraph.svg
+callgrind.out.*
+massif.out.*
+
+# ==== IDE / 编辑器 ====
+.vscode/
+!.vscode/settings.json  # 如果想共享团队设置,把它加回来(去掉这两行即用默认忽略)
+!.vscode/extensions.json
+!.vscode/launch.json
+
+.idea/
+*.iml
+.vs/
+*.sublime-workspace
+*.sublime-project
+
+# ==== macOS / Windows / Linux 系统垃圾 ====
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ==== Python(如果有脚本用 venv) ====
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ==== 本地数据 / 市场数据样本(HFT 项目常见) ====
+data/
+*.pcap
+*.csv
+*.bin
+!tests/**/*.bin         # 如果测试需要小的 .bin 样本,加例外
