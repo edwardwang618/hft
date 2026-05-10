@@ -1,0 +1,5 @@
+if(EXISTS "/home/debian/hft/build/tests/core/test_core[1]_tests.cmake")
+  include("/home/debian/hft/build/tests/core/test_core[1]_tests.cmake")
+else()
+  add_test(test_core_NOT_BUILT test_core_NOT_BUILT)
+endif()

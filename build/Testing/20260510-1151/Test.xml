@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20260510-1151-Experimental"
+	Name="(empty)"
+	Generator="ctest-3.31.6"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Linux"
+	Hostname="debian"
+	OSRelease="6.12.85+deb13-arm64"
+	OSVersion="#1 SMP Debian 6.12.85-1 (2026-04-30)"
+	OSPlatform="aarch64"
+	Is64Bits="1"
+	VendorString=""
+	VendorID="Unknown Manufacturer"
+	FamilyID="8"
+	ModelID="0"
+	ModelName=""
+	ProcessorCacheSize="0"
+	NumberOfLogicalCPU="8"
+	NumberOfPhysicalCPU="1"
+	TotalVirtualMemory="7119"
+	TotalPhysicalMemory="3915"
+	LogicalProcessorsPerPhysical="8"
+	ProcessorClockFrequency="0"
+	>
+	<Testing>
+		<StartDateTime>May 10 05:21 PDT</StartDateTime>
+		<StartTestTime>1778415669</StartTestTime>
+		<TestList/>
+		<EndDateTime>May 10 05:21 PDT</EndDateTime>
+		<EndTestTime>1778415669</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

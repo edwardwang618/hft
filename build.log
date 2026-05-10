@@ -1,0 +1,15 @@
+[ 50%] Building CXX object tests/CMakeFiles/test_logger.dir/test_logger.cpp.o
+In file included from /home/debian/hft/tests/test_logger.cpp:3:
+/home/debian/hft/include/hft/core/logger.hpp:141:80: warning: backslash-newline at end of file
+  141 | #define HFT_LOG_DEBUG(fmt, ...)                                                \
+[100%] Linking CXX executable test_logger
+ld.lld: error: undefined symbol: hft::LoggerBackend::drain_once()
+>>> referenced by logger.hpp:69 (/home/debian/hft/include/hft/core/logger.hpp:69)
+>>>               CMakeFiles/test_logger.dir/test_logger.cpp.o:(std::thread::_State_impl<std::thread::_Invoker<std::tuple<hft::LoggerBackend::start(_IO_FILE*)::'lambda'()>>>::_M_run())
+>>> referenced by logger.hpp:74 (/home/debian/hft/include/hft/core/logger.hpp:74)
+>>>               CMakeFiles/test_logger.dir/test_logger.cpp.o:(std::thread::_State_impl<std::thread::_Invoker<std::tuple<hft::LoggerBackend::start(_IO_FILE*)::'lambda'()>>>::_M_run())
+collect2: error: ld returned 1 exit status
+gmake[3]: *** [tests/CMakeFiles/test_logger.dir/build.make:103: tests/test_logger] Error 1
+gmake[2]: *** [CMakeFiles/Makefile2:269: tests/CMakeFiles/test_logger.dir/all] Error 2
+gmake[1]: *** [CMakeFiles/Makefile2:276: tests/CMakeFiles/test_logger.dir/rule] Error 2
+gmake: *** [Makefile:186: test_logger] Error 2
