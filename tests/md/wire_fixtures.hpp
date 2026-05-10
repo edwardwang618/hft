@@ -26,7 +26,7 @@ struct Buf {
   std::span<const std::byte> span() const { return {data.data(), data.size()}; }
 };
 
-Buf enc_header(uint8_t type);
+Buf enc_header(uint8_t type, uint64_t seq = 0);
 
 std::vector<std::byte> make_add(hft::Ts ts, hft::SymbolId sym, hft::OrderId id,
                                 hft::Side side, hft::Price px, hft::Qty qty);

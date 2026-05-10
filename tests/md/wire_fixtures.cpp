@@ -1,12 +1,14 @@
 #include "wire_fixtures.hpp"
+#include <cstdint>
 
 namespace hft::test {
 
-Buf enc_header(uint8_t type) {
+Buf enc_header(uint8_t type, uint64_t seq) {
   Buf b;
   b.put<uint8_t>(type);
   b.put<uint8_t>(0);
   b.put<uint16_t>(0);
+  b.put<uint64_t>(seq);
   return b;
 }
 
