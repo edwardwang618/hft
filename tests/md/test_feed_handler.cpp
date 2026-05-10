@@ -30,15 +30,17 @@ struct Buf {
 
 Buf enc_header(uint8_t type) {
   Buf b;
-  b.put<uint8_t>(type);
-  b.put<uint8_t>(0);
-  b.put<uint16_t>(0); // patched later
+  wire::Header h{};
+  h.msg_type = type;
+  h.msg_len = 0; // patched later
+  h.seq = 0;
+  b.put(h);
   return b;
 }
 
 // 造一条完整的 Add message
-Buf make_add(uint64_t ts, uint32_t sym, uint64_t id,
-             uint8_t side, int64_t px, int64_t qty) {
+Buf make_add(uint64_t ts, uint32_t sym, uint64_t id, uint8_t side, int64_t px,
+             int64_t qty) {
   auto b = enc_header(wire::kAdd);
   b.put<uint64_t>(ts);
   b.put<uint32_t>(sym);
@@ -90,8 +92,8 @@ TEST(FeedHandler, SingleCompleteMessage) {
   CollectingSink sink;
   FeedHandler<CollectingSink> fh(sink);
 
-  auto b = make_add(/*ts*/1000, /*sym*/42, /*id*/7,
-                    /*side*/0, /*px*/12345, /*qty*/10);
+  auto b = make_add(/*ts*/ 1000, /*sym*/ 42, /*id*/ 7,
+                    /*side*/ 0, /*px*/ 12345, /*qty*/ 10);
 
   fh.on_bytes(b.data.data(), b.size());
 
