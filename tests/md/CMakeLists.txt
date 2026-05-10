@@ -3,6 +3,8 @@
 add_executable(test_binary_parser
   test_binary_parser.cpp
   test_feed_handler.cpp
+  test_integration_feed_to_book.cpp
+  wire_fixtures.cpp
 )
 
 target_link_libraries(test_binary_parser

@@ -1,3 +1,4 @@
+#include "wire_fixtures.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -9,32 +10,8 @@
 
 using namespace hft;
 using namespace hft::md;
-
-namespace {
-
-struct Buf {
-  std::vector<std::byte> data;
-  template <class T> void put(const T &v) {
-    const auto *p = reinterpret_cast<const std::byte *>(&v);
-    data.insert(data.end(), p, p + sizeof(T));
-  }
-  size_t size() const { return data.size(); }
-  void patch_len() {
-    uint16_t len = static_cast<uint16_t>(data.size());
-    std::memcpy(data.data() + 2, &len, sizeof(len));
-  }
-  std::span<const std::byte> span() const { return {data.data(), data.size()}; }
-};
-
-Buf enc_header(uint8_t type) {
-  Buf b;
-  b.put<uint8_t>(type);
-  b.put<uint8_t>(0);
-  b.put<uint16_t>(0); // placeholder, patch later
-  return b;
-}
-
-} // namespace
+using hft::test::Buf;
+using hft::test::enc_header;
 
 TEST(BinaryParser, NeedMoreOnEmpty) {
   BinaryParser p;
@@ -51,7 +28,7 @@ TEST(BinaryParser, NeedMoreOnPartialHeader) {
 
 TEST(BinaryParser, Add_Roundtrip) {
   auto b = enc_header(wire::kAdd);
-  b.put<uint64_t>(1000);  // ts
+  b.put<uint64_t>(1000); // ts
   b.put<uint32_t>(42);   // sym
   b.put<uint64_t>(7);    // id
   b.put<uint8_t>(0);     // side = Buy

@@ -24,8 +24,16 @@ public:
     wire::Header h{};
     std::memcpy(&h, buf.data(), sizeof(h));
 
-    if (h.msg_len < sizeof(wire::Header))
-      return ParseResult::error();
+    // header sanity: 在相信 msg_len 之前就要判掉不可能的值
+    constexpr std::size_t kMaxFrameLen = 4096; // 按你协议调
+    if (h.msg_len < sizeof(wire::Header) || h.msg_len > kMaxFrameLen) {
+      // msg_len 不可信, 没法定位下一帧. 把当前 buffer 全扔掉.
+      return ParseResult::error(buf.size());
+    }
+
+    // 可选: msg_type 也在这里白名单过一遍, 不认识就当整帧坏
+    // (也可以留到 default 分支, 反正那时 msg_len 已经可信了)
+
     if (buf.size() < h.msg_len)
       return ParseResult::need_more();
 
