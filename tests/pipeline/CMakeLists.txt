@@ -13,4 +13,7 @@ target_link_libraries(test_feed_handler PRIVATE
     hft_core
     GTest::gtest_main
 )
+target_include_directories(test_feed_handler PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/support
+)
 gtest_discover_tests(test_feed_handler)
