@@ -5,10 +5,11 @@ namespace hft::test {
 
 Buf enc_header(uint8_t type, uint64_t seq) {
   Buf b;
-  b.put<uint8_t>(type);
-  b.put<uint8_t>(0);
-  b.put<uint16_t>(0);
-  b.put<uint64_t>(seq);
+  md::wire::Header h{};
+  h.msg_type = type;
+  h.msg_len = 0; // patched later
+  h.seq = seq;
+  b.put(h);
   return b;
 }
 

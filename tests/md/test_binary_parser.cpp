@@ -117,3 +117,34 @@ TEST(BinaryParser, TwoMessagesInOneBuffer) {
   EXPECT_TRUE(std::holds_alternative<Clear>(*r2.event));
 }
 
+TEST(BinaryParser, SeqIsPropagatedFromHeader) {
+  using namespace hft;
+  using namespace hft::test;
+
+  md::BinaryParser p;
+
+  // Add: seq=42
+  {
+    auto bytes = make_add(/*seq=*/42, /*ts=*/1, /*sym=*/1, /*id=*/1, Side::Buy,
+                          /*px=*/1'000'000, /*qty=*/10);
+    auto r = p.parse(std::span{bytes});
+    ASSERT_EQ(r.status, md::ParseResult::Ok);
+    EXPECT_EQ(r.consumed, bytes.size());
+    EXPECT_EQ(r.seq, 42u);
+  }
+  // Cancel: seq=43
+  {
+    auto bytes = make_cancel(/*seq=*/43, /*ts=*/2, /*sym=*/1, /*id=*/1);
+    auto r = p.parse(std::span{bytes});
+    ASSERT_EQ(r.status, md::ParseResult::Ok);
+    EXPECT_EQ(r.seq, 43u);
+  }
+  // Trade: 大数值, 确认是 header 原样透传, 不是被截断
+  {
+    auto bytes = make_trade(/*seq=*/0xDEADBEEFu, /*ts=*/3, /*sym=*/1,
+                            /*px=*/1'000'500, /*qty=*/5, /*trade_id=*/9999);
+    auto r = p.parse(std::span{bytes});
+    ASSERT_EQ(r.status, md::ParseResult::Ok);
+    EXPECT_EQ(r.seq, 0xDEADBEEFu);
+  }
+}

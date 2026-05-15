@@ -2,6 +2,17 @@ enable_testing()
 include(GoogleTest)
 find_package(GTest REQUIRED)
 
+# ---- 共享测试 fixtures ----
+add_library(hft_test_fixtures OBJECT
+    wire_fixtures.cpp
+)
+target_include_directories(hft_test_fixtures PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(hft_test_fixtures PUBLIC
+    hft_core
+)
+
 # 自动 add_subdirectory 所有带 CMakeLists.txt 的子目录
 file(GLOB _test_subdirs
      LIST_DIRECTORIES true
