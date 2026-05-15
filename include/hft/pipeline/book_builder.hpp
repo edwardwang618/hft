@@ -35,7 +35,7 @@ private:
   Book &book_of(md::SymbolId s) { return books_[s]; } // 首次访问自动建
 
   void apply(const md::Add &a) {
-    hft::core::Order o{};
+    hft::Order o{};
     o.id = a.id;
     o.side = a.side;
     o.price = a.px;
@@ -49,7 +49,7 @@ private:
   void apply(const md::Replace &r) {
     auto &b = book_of(r.sym);
     b.cancel(r.old_id);
-    hft::core::Order o{};
+    hft::Order o{};
     o.id = r.new_id;
     o.price = r.px;
     o.qty = r.qty;

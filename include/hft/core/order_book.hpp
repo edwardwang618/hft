@@ -16,14 +16,6 @@ namespace hft::core {
 
 using Side = hft::Side;
 
-struct Order {
-  OrderId id;
-  Side side;
-  Price price;
-  Qty qty; // remaining quantity
-  Ts ts;   // arrival timestamp (for priority tiebreak / analytics)
-};
-
 // ─── A single price level: FIFO of orders at one price ────────────────
 struct PriceLevel {
   Qty total_qty{0};

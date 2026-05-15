@@ -30,6 +30,15 @@ constexpr const char *to_string(Side s) {
   return s == Side::Buy ? "BUY" : "SELL";
 }
 
+// ─── Limit order ──────────────────────────────────────────────────────
+struct Order {
+  OrderId id;
+  Side    side;
+  Price   price;
+  Qty     qty;
+  Ts      ts;
+};
+
 // ─── Invalid sentinels ────────────────────────────────────────────────
 inline constexpr Price kInvalidPrice = INT64_MIN;
 inline constexpr Qty kInvalidQty = INT64_MIN;
