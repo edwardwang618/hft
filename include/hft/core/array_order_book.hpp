@@ -35,7 +35,8 @@ public:
 
   void set_trade_callback(TradeFn fn) { on_trade_ = std::move(fn); }
 
-  void add_limit(Order o);
+  // Returns false if o.price is outside [min_price_, min_price_ + num_ticks_*tick_).
+  bool add_limit(Order o);
   bool cancel(OrderId id);
   bool reduce(OrderId id, Qty new_qty) noexcept;
   bool execute(OrderId id, Qty exec_qty) noexcept;
@@ -226,7 +227,6 @@ private:
 
 inline void ArrayOrderBook::rest_(Order o) {
   const uint32_t sidx = price_to_slot(o.price);
-  assert(sidx < num_ticks_);
 
   if (o.side == Side::Buy) {
     Slot &sl = bids_[sidx];
@@ -255,13 +255,16 @@ inline void ArrayOrderBook::rest_(Order o) {
   }
 }
 
-inline void ArrayOrderBook::add_limit(Order o) {
+inline bool ArrayOrderBook::add_limit(Order o) {
+  if (price_to_slot(o.price) >= num_ticks_)
+    return false;
   if (o.side == Side::Buy)
     match_buy_(o);
   else
     match_sell_(o);
   if (o.qty > 0)
     rest_(std::move(o));
+  return true;
 }
 
 inline bool ArrayOrderBook::cancel(OrderId id) {

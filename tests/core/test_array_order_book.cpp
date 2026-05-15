@@ -292,3 +292,15 @@ TEST(ArrayOrderBook, CompactionKeepsStateConsistent) {
   EXPECT_FALSE(b.best_ask().has_value());
   EXPECT_EQ(b.num_orders(), 0u);
 }
+
+TEST(ArrayOrderBook, OutOfRangePriceRejected) {
+  // Book covers prices 1–20000.
+  auto b = make_book();
+  EXPECT_FALSE(b.add_limit(mk(1, Side::Buy,      0, 5)));  // below min
+  EXPECT_FALSE(b.add_limit(mk(2, Side::Buy,  20001, 5)));  // above max
+  EXPECT_FALSE(b.add_limit(mk(3, Side::Sell,    -1, 5)));  // negative
+  // Book must remain empty.
+  EXPECT_FALSE(b.best_bid().has_value());
+  EXPECT_FALSE(b.best_ask().has_value());
+  EXPECT_EQ(b.num_orders(), 0u);
+}
