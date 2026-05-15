@@ -43,7 +43,7 @@ build.log
 *.swp
 *.swo
 *~
-core
+/core
 core.*
 
 # ==== 测试覆盖率 ====
