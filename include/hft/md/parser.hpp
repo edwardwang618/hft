@@ -1,4 +1,5 @@
 #pragma once
+#include "md_event.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <hft/md/md_event.hpp>

@@ -62,4 +62,4 @@ void FeedHandler<Sink>::on_bytes(const std::byte *data, std::size_t n) {
   }
 }
 
-} // namespace hft::md
+} // namespace hft::pipeline
