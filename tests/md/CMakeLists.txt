@@ -2,7 +2,7 @@
 
 add_executable(test_binary_parser
   test_binary_parser.cpp
-  test_integration_feed_to_book.cpp
+  test_integration_binary_feed_to_book.cpp
 )
 
 target_link_libraries(test_binary_parser
@@ -23,6 +23,7 @@ gtest_discover_tests(test_binary_parser)
 
 add_executable(test_fix_parser
   test_fix_parser.cpp
+  test_integration_fix_feed_to_book.cpp
 )
 
 target_link_libraries(test_fix_parser

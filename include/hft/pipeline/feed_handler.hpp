@@ -1,7 +1,5 @@
 #pragma once
 
-#include "hft/md/binary_parser.hpp"
-#include "hft/md/md_event.hpp"
 #include "hft/md/parser.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +7,7 @@
 
 namespace hft::pipeline {
 
-template <class Sink> class FeedHandler {
+template <class Sink, class Parser> class FeedHandler {
 public:
   explicit FeedHandler(Sink &sink) : sink_(sink) {}
 
@@ -23,7 +21,7 @@ public:
 private:
   Sink &sink_;
   std::vector<std::byte> buf_;
-  md::BinaryParser parser_; // 如果你的 parser 是无状态的, 这个可以去掉, 直接静态调
+  Parser parser_;
   std::uint64_t msgs_ = 0;
   std::uint64_t bytes_ = 0;
   std::uint64_t corrupt_ = 0;
@@ -33,8 +31,8 @@ private:
 //   1. append 到 buf_
 //   2. loop parse, 每得到一个 event 就 sink_.on_event(ev)
 //   3. parser 说 NeedMore 就 break, 剩余字节留在 buf_ 里等下次
-template <class Sink>
-void FeedHandler<Sink>::on_bytes(const std::byte *data, std::size_t n) {
+template <class Sink, class Parser>
+void FeedHandler<Sink, Parser>::on_bytes(const std::byte *data, std::size_t n) {
   buf_.insert(buf_.end(), data, data + n);
 
   std::size_t offset = 0;

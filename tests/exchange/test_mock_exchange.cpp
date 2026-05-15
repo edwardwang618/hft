@@ -2,6 +2,7 @@
 #include <hft/exchange/binary_serializer.hpp>
 #include <hft/exchange/byte_sink.hpp>
 #include <hft/exchange/mock_exchange.hpp>
+#include <hft/md/binary_parser.hpp>
 #include <hft/pipeline/feed_handler.hpp>
 
 using namespace hft;
@@ -19,8 +20,8 @@ struct RecordingSink {
 
 TEST(MockExchange, ScriptedRoundTripBinary) {
   RecordingSink rec;
-  pipeline::FeedHandler<RecordingSink> fh{rec};
-  exchange::DirectSink<pipeline::FeedHandler<RecordingSink>> sink{fh};
+  pipeline::FeedHandler<RecordingSink, md::BinaryParser> fh{rec};
+  exchange::DirectSink<pipeline::FeedHandler<RecordingSink, md::BinaryParser>> sink{fh};
   exchange::BinarySerializer ser;
   exchange::MockExchange mx{sink, ser, /*start_seq=*/100};
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <hft/core/order_book.hpp>
+#include <hft/md/binary_parser.hpp>
 #include <hft/pipeline/feed_handler.hpp>
 #include <hft/md/md_event.hpp>
 #include <hft/pipeline/book_builder.hpp>
@@ -47,7 +48,7 @@ TEST(FeedToBook, MultipleAddsReflectInBook) {
   });
 
   Pipe pipe;
-  hft::pipeline::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe, hft::md::BinaryParser> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
   EXPECT_EQ(fh.msgs_parsed(), 4u);
@@ -73,7 +74,7 @@ TEST(FeedToBook, AddReduceCancelLifecycle) {
   });
 
   Pipe pipe;
-  hft::pipeline::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe, hft::md::BinaryParser> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
   EXPECT_EQ(fh.msgs_parsed(), 3u);
@@ -97,11 +98,11 @@ TEST(FeedToBook, ChunkingDoesNotAffectFinalBookState) {
   });
 
   Pipe whole;
-  hft::pipeline::FeedHandler<Pipe> whole_fh(whole);
+  hft::pipeline::FeedHandler<Pipe, hft::md::BinaryParser> whole_fh(whole);
   whole_fh.on_bytes(bytes.data(), bytes.size());
 
   Pipe drip;
-  hft::pipeline::FeedHandler<Pipe> drip_fh(drip);
+  hft::pipeline::FeedHandler<Pipe, hft::md::BinaryParser> drip_fh(drip);
   for (const auto &b : bytes)
     drip_fh.on_bytes(&b, 1);
 
@@ -128,7 +129,7 @@ TEST(FeedToBook, GarbageInMiddleDoesNotCorruptBook) {
   auto post = make_add(0, 2, 1, 2, Side::Sell, 100100, 150);
 
   Pipe pipe;
-  hft::pipeline::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe, hft::md::BinaryParser> fh(pipe);
   fh.on_bytes(pre.data(), pre.size());
   fh.on_bytes(garbage.data(), garbage.size());
   fh.on_bytes(post.data(), post.size());
@@ -154,7 +155,7 @@ TEST(FeedToBook, MultiSymbolIsolation) {
   });
 
   Pipe pipe;
-  hft::pipeline::FeedHandler<Pipe> fh(pipe);
+  hft::pipeline::FeedHandler<Pipe, hft::md::BinaryParser> fh(pipe);
   fh.on_bytes(bytes.data(), bytes.size());
 
   ASSERT_EQ(pipe.books().size(), 2u);
