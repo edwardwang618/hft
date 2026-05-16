@@ -8,3 +8,13 @@ target_link_libraries(test_strategy
 )
 include(GoogleTest)
 gtest_discover_tests(test_strategy)
+
+add_executable(test_simple_quoter
+  test_simple_quoter.cpp
+)
+target_link_libraries(test_simple_quoter
+  PRIVATE
+    hft_core
+    GTest::gtest_main
+)
+gtest_discover_tests(test_simple_quoter)

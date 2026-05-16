@@ -15,8 +15,9 @@ class IOrderGateway {
 public:
   virtual ~IOrderGateway() = default;
 
-  // Send a new limit order. 发送新的限价单。
-  virtual void send_new(md::SymbolId sym, Side side, Price px, Qty qty) = 0;
+  // Send a new limit order; returns the assigned client order id.
+  // 发送新的限价单；返回分配的客户端订单 ID。
+  virtual OrderId send_new(md::SymbolId sym, Side side, Price px, Qty qty) = 0;
 
   // Cancel an existing order by id. 按 ID 撤销已有订单。
   virtual void send_cancel(OrderId id) = 0;

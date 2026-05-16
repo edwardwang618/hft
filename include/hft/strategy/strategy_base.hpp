@@ -47,8 +47,8 @@ protected:
 
   // Convenience wrappers forwarding to the gateway.
   // 转发到网关的便利包装函数。
-  void send_new(md::SymbolId sym, Side side, Price px, Qty qty) {
-    gateway_.send_new(sym, side, px, qty);
+  OrderId send_new(md::SymbolId sym, Side side, Price px, Qty qty) {
+    return gateway_.send_new(sym, side, px, qty);
   }
   void send_cancel(OrderId id) { gateway_.send_cancel(id); }
   void send_replace(OrderId old_id, Price new_px, Qty new_qty) {

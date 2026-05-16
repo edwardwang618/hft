@@ -15,14 +15,17 @@ namespace {
 // ─── Mock gateway ────────────────────────────────────────────────────────
 
 struct MockGateway : IOrderGateway {
-  struct NewOrder { SymbolId sym; Side side; Price px; Qty qty; };
+  struct NewOrder { OrderId id; SymbolId sym; Side side; Price px; Qty qty; };
   struct CancelReq { OrderId id; };
 
   std::vector<NewOrder>  sent_new;
   std::vector<CancelReq> sent_cancel;
+  OrderId next_id_{1};
 
-  void send_new(SymbolId sym, Side side, Price px, Qty qty) override {
-    sent_new.push_back({sym, side, px, qty});
+  OrderId send_new(SymbolId sym, Side side, Price px, Qty qty) override {
+    OrderId id = next_id_++;
+    sent_new.push_back({id, sym, side, px, qty});
+    return id;
   }
   void send_cancel(OrderId id) override { sent_cancel.push_back({id}); }
   void send_replace(OrderId, Price, Qty) override {}
