@@ -34,10 +34,9 @@ public:
   // Called when the book changes but BBO does not.
   // The Book template lets you call qty_at(), num_bid_levels(), etc.
   // Default is a no-op; override when you need level-2 data.
-  // 簿状态变化但 BBO 不变时调用。Book 模板参数支持调用 qty_at()、num_bid_levels() 等。
-  // 默认为空操作；需要二档数据时覆盖此方法。
-  template <class Book>
-  void on_depth(md::SymbolId, const Book &) noexcept {}
+  // 簿状态变化但 BBO 不变时调用。Book 模板参数支持调用
+  // qty_at()、num_bid_levels() 等。 默认为空操作；需要二档数据时覆盖此方法。
+  template <class Book> void on_depth(md::SymbolId, const Book &) noexcept {}
 
   // Called for every passive execution visible in the feed.
   // 每次行情中可见的被动成交时调用。

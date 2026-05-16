@@ -17,3 +17,17 @@ target_include_directories(test_feed_handler PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/support
 )
 gtest_discover_tests(test_feed_handler)
+
+add_executable(test_gap_detector test_gap_detector.cpp)
+target_link_libraries(test_gap_detector PRIVATE
+    hft_core
+    GTest::gtest_main
+)
+gtest_discover_tests(test_gap_detector)
+
+add_executable(test_gap_detector_integration test_gap_detector_integration.cpp)
+target_link_libraries(test_gap_detector_integration PRIVATE
+    hft_core
+    GTest::gtest_main
+)
+gtest_discover_tests(test_gap_detector_integration)
