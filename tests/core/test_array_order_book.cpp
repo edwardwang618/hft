@@ -1,7 +1,7 @@
 #include "hft/core/types.hpp"
-#include <hft/core/array_order_book.hpp>
-#include <gtest/gtest.h>
 #include <functional>
+#include <gtest/gtest.h>
+#include <hft/core/array_order_book.hpp>
 #include <vector>
 
 using namespace hft;
@@ -14,16 +14,20 @@ ArrayOrderBook<> make_book() { return ArrayOrderBook<>(1, 20000, 1); }
 
 Order mk(OrderId id, Side s, Price px, Qty q, Ts t = 0) {
   Order o{};
-  o.id    = id;
-  o.side  = s;
+  o.id = id;
+  o.side = s;
   o.price = px;
-  o.qty   = q;
-  o.ts    = t;
+  o.qty = q;
+  o.ts = t;
   return o;
 }
 
 struct Recorder {
-  struct Fill { OrderId maker, taker; Price px; Qty qty; };
+  struct Fill {
+    OrderId maker, taker;
+    Price px;
+    Qty qty;
+  };
   std::vector<Fill> fills;
   void operator()(OrderId m, OrderId t, Price p, Qty q) {
     fills.push_back({m, t, p, q});
@@ -51,11 +55,11 @@ TEST(ArrayOrderBook, NoCrossNoFill) {
   Recorder r;
   b.set_trade_callback(std::ref(r));
 
-  b.add_limit(mk(1, Side::Buy,   999, 5));
+  b.add_limit(mk(1, Side::Buy, 999, 5));
   b.add_limit(mk(2, Side::Sell, 1001, 5));
 
   EXPECT_TRUE(r.fills.empty());
-  EXPECT_EQ(*b.best_bid(),   999);
+  EXPECT_EQ(*b.best_bid(), 999);
   EXPECT_EQ(*b.best_ask(), 1001);
 }
 
@@ -65,13 +69,13 @@ TEST(ArrayOrderBook, MarketableBuyPartialFill) {
   b.set_trade_callback(std::ref(r));
 
   b.add_limit(mk(1, Side::Sell, 100, 10));
-  b.add_limit(mk(2, Side::Buy,  101,  4));
+  b.add_limit(mk(2, Side::Buy, 101, 4));
 
   ASSERT_EQ(r.fills.size(), 1u);
   EXPECT_EQ(r.fills[0].maker, 1u);
   EXPECT_EQ(r.fills[0].taker, 2u);
-  EXPECT_EQ(r.fills[0].px,    100);
-  EXPECT_EQ(r.fills[0].qty,   4);
+  EXPECT_EQ(r.fills[0].px, 100);
+  EXPECT_EQ(r.fills[0].qty, 4);
 
   EXPECT_EQ(*b.best_ask(), 100);
   EXPECT_FALSE(b.best_bid().has_value());
@@ -84,13 +88,13 @@ TEST(ArrayOrderBook, FifoPriorityAtSamePrice) {
 
   b.add_limit(mk(1, Side::Sell, 100, 5, /*ts=*/1));
   b.add_limit(mk(2, Side::Sell, 100, 5, /*ts=*/2));
-  b.add_limit(mk(9, Side::Buy,  100, 7));
+  b.add_limit(mk(9, Side::Buy, 100, 7));
 
   ASSERT_EQ(r.fills.size(), 2u);
   EXPECT_EQ(r.fills[0].maker, 1u);
-  EXPECT_EQ(r.fills[0].qty,   5);
+  EXPECT_EQ(r.fills[0].qty, 5);
   EXPECT_EQ(r.fills[1].maker, 2u);
-  EXPECT_EQ(r.fills[1].qty,   2);
+  EXPECT_EQ(r.fills[1].qty, 2);
 }
 
 TEST(ArrayOrderBook, SweepMultipleLevels) {
@@ -101,12 +105,12 @@ TEST(ArrayOrderBook, SweepMultipleLevels) {
   b.add_limit(mk(1, Side::Sell, 100, 5));
   b.add_limit(mk(2, Side::Sell, 101, 5));
   b.add_limit(mk(3, Side::Sell, 102, 5));
-  b.add_limit(mk(9, Side::Buy,  102, 12));
+  b.add_limit(mk(9, Side::Buy, 102, 12));
 
   ASSERT_EQ(r.fills.size(), 3u);
-  EXPECT_EQ(r.fills[0].px,  100);
-  EXPECT_EQ(r.fills[1].px,  101);
-  EXPECT_EQ(r.fills[2].px,  102);
+  EXPECT_EQ(r.fills[0].px, 100);
+  EXPECT_EQ(r.fills[1].px, 101);
+  EXPECT_EQ(r.fills[2].px, 102);
   EXPECT_EQ(r.fills[2].qty, 2);
 
   EXPECT_EQ(*b.best_ask(), 102);
@@ -132,8 +136,8 @@ TEST(ArrayOrderBook, RestedResidualAfterPartialCross) {
   Recorder r;
   b.set_trade_callback(std::ref(r));
 
-  b.add_limit(mk(1, Side::Sell, 100,  5));
-  b.add_limit(mk(2, Side::Buy,  100, 12));
+  b.add_limit(mk(1, Side::Sell, 100, 5));
+  b.add_limit(mk(2, Side::Buy, 100, 12));
 
   ASSERT_EQ(r.fills.size(), 1u);
   EXPECT_EQ(*b.best_bid(), 100);
@@ -145,7 +149,7 @@ TEST(ArrayOrderBook, RestedResidualAfterPartialCross) {
 TEST(ArrayOrderBookReduce, ShrinksQtyAndLevelTotal) {
   auto b = make_book();
   b.add_limit(mk(1, Side::Buy, 100, 10));
-  b.add_limit(mk(2, Side::Buy, 100,  5));
+  b.add_limit(mk(2, Side::Buy, 100, 5));
 
   ASSERT_TRUE(b.reduce(1, 3));
   EXPECT_EQ(b.qty_at(Side::Buy, 100), 3 + 5);
@@ -159,7 +163,8 @@ TEST(ArrayOrderBookReduce, PreservesTimePriority) {
   ASSERT_TRUE(b.reduce(1, 4));
 
   std::vector<OrderId> makers;
-  b.set_trade_callback([&](OrderId m, OrderId, Price, Qty){ makers.push_back(m); });
+  b.set_trade_callback(
+      [&](OrderId m, OrderId, Price, Qty) { makers.push_back(m); });
   b.add_limit(mk(99, Side::Buy, 200, 100));
 
   ASSERT_EQ(makers.size(), 2u);
@@ -172,7 +177,7 @@ TEST(ArrayOrderBookReduce, RejectsGrowEqualZero) {
   b.add_limit(mk(1, Side::Buy, 100, 10));
   EXPECT_FALSE(b.reduce(1, 10));
   EXPECT_FALSE(b.reduce(1, 20));
-  EXPECT_FALSE(b.reduce(1,  0));
+  EXPECT_FALSE(b.reduce(1, 0));
   EXPECT_EQ(b.qty_at(Side::Buy, 100), 10);
 }
 
@@ -208,7 +213,7 @@ TEST(ArrayOrderBookExecute, FullRemovesOrderAndLevel) {
 TEST(ArrayOrderBookExecute, FullKeepsLevelIfOthersRest) {
   auto b = make_book();
   b.add_limit(mk(1, Side::Sell, 200, 10));
-  b.add_limit(mk(2, Side::Sell, 200,  5));
+  b.add_limit(mk(2, Side::Sell, 200, 5));
   ASSERT_TRUE(b.execute(1, 10));
 
   EXPECT_EQ(*b.best_ask(), 200);
@@ -259,15 +264,15 @@ TEST(ArrayOrderBook, CancelMiddleOrderFifoPreserved) {
   b.add_limit(mk(1, Side::Sell, 100, 5));
   b.add_limit(mk(2, Side::Sell, 100, 5));
   b.add_limit(mk(3, Side::Sell, 100, 5));
-  ASSERT_TRUE(b.cancel(2));  // tombstone in middle
+  ASSERT_TRUE(b.cancel(2)); // tombstone in middle
 
-  b.add_limit(mk(9, Side::Buy, 100, 8));  // 5 from #1, 3 from #3
+  b.add_limit(mk(9, Side::Buy, 100, 8)); // 5 from #1, 3 from #3
 
   ASSERT_EQ(r.fills.size(), 2u);
   EXPECT_EQ(r.fills[0].maker, 1u);
-  EXPECT_EQ(r.fills[0].qty,   5);
+  EXPECT_EQ(r.fills[0].qty, 5);
   EXPECT_EQ(r.fills[1].maker, 3u);
-  EXPECT_EQ(r.fills[1].qty,   3);
+  EXPECT_EQ(r.fills[1].qty, 3);
   EXPECT_EQ(b.qty_at(Side::Sell, 100), 2);
 }
 
@@ -279,7 +284,7 @@ TEST(ArrayOrderBook, CompactionKeepsStateConsistent) {
   // Add 34 sell orders + 1 sentinel at the same price.
   for (OrderId id = 1; id <= 34; ++id)
     b.add_limit(mk(id, Side::Sell, 100, 1));
-  b.add_limit(mk(99, Side::Sell, 100, 10));  // sentinel, will survive compaction
+  b.add_limit(mk(99, Side::Sell, 100, 10)); // sentinel, will survive compaction
 
   // A large buy sweeps the first 34 orders, triggering compaction.
   b.add_limit(mk(200, Side::Buy, 100, 34));
@@ -296,9 +301,9 @@ TEST(ArrayOrderBook, CompactionKeepsStateConsistent) {
 TEST(ArrayOrderBook, OutOfRangePriceRejected) {
   // Book covers prices 1–20000.
   auto b = make_book();
-  EXPECT_FALSE(b.add_limit(mk(1, Side::Buy,      0, 5)));  // below min
-  EXPECT_FALSE(b.add_limit(mk(2, Side::Buy,  20001, 5)));  // above max
-  EXPECT_FALSE(b.add_limit(mk(3, Side::Sell,    -1, 5)));  // negative
+  EXPECT_FALSE(b.add_limit(mk(1, Side::Buy, 0, 5)));     // below min
+  EXPECT_FALSE(b.add_limit(mk(2, Side::Buy, 20001, 5))); // above max
+  EXPECT_FALSE(b.add_limit(mk(3, Side::Sell, -1, 5)));   // negative
   // Book must remain empty.
   EXPECT_FALSE(b.best_bid().has_value());
   EXPECT_FALSE(b.best_ask().has_value());

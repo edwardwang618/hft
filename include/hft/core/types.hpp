@@ -18,7 +18,7 @@ using Qty = int64_t;
 
 // ─── Identifiers ──────────────────────────────────────────────────────
 // 各类标识符
-using SeqNum  = uint64_t;
+using SeqNum = uint64_t;
 using OrderId = uint64_t;
 using SymbolId = uint32_t;
 
@@ -29,7 +29,7 @@ using Ts = uint64_t;
 // ─── Side ─────────────────────────────────────────────────────────────
 // 买卖方向
 enum class Side : uint8_t {
-  Buy  = 0,
+  Buy = 0,
   Sell = 1,
 };
 
@@ -41,17 +41,17 @@ constexpr const char *to_string(Side s) {
 // 限价单（POD，可安全拷贝）
 struct Order {
   OrderId id;
-  Side    side;
-  Price   price;
-  Qty     qty;
-  Ts      ts;
+  Side side;
+  Price price;
+  Qty qty;
+  Ts ts;
 };
 
 // ─── Invalid sentinels ────────────────────────────────────────────────
 // 无效值哨兵（用于错误检测）
-inline constexpr Price    kInvalidPrice    = INT64_MIN;
-inline constexpr Qty      kInvalidQty      = INT64_MIN;
-inline constexpr OrderId  kInvalidOrderId  = 0;
+inline constexpr Price kInvalidPrice = INT64_MIN;
+inline constexpr Qty kInvalidQty = INT64_MIN;
+inline constexpr OrderId kInvalidOrderId = 0;
 inline constexpr SymbolId kInvalidSymbolId = 0;
 
 } // namespace hft

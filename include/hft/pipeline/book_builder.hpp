@@ -57,7 +57,8 @@ public:
   // Disabled when the first argument is convertible to BookFactory so the
   // factory overload below wins for lambdas and std::function arguments.
   // 无工厂：Book 须可默认构造（NullListener 类型）。
-  // 当第一个参数可转换为 BookFactory 时禁用，使工厂重载优先匹配 lambda/std::function。
+  // 当第一个参数可转换为 BookFactory 时禁用，使工厂重载优先匹配
+  // lambda/std::function。
   template <class First, class... Rest>
   explicit BookBuilder(First &&first, Rest &&...rest)
     requires(!std::convertible_to<std::decay_t<First>, BookFactory>)
@@ -103,11 +104,13 @@ private:
     // Fallback: default-construct. Only reachable when Book is
     // default-constructible (NullListener books); factory-required books
     // always hit the branch above.
-    // 回退：默认构造。仅在 Book 可默认构造时可达；需要工厂的 Book 始终命中上方分支。
+    // 回退：默认构造。仅在 Book 可默认构造时可达；需要工厂的 Book
+    // 始终命中上方分支。
     if constexpr (std::default_initializable<Book>)
       return books_.emplace(sym, Book{}).first->second;
     else
-      std::terminate(); // factory must be provided for this Book type / 此 Book 类型必须提供工厂
+      std::terminate(); // factory must be provided for this Book type / 此 Book
+                        // 类型必须提供工厂
   }
 
   // Generic: apply the event (fires listener callbacks if book has one).

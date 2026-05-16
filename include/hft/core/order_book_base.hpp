@@ -43,9 +43,9 @@ public:
   // BBO 快照：某方向为 0 表示该方向为空。
   struct Bbo {
     Price bid{0};
-    Qty   bid_qty{0};
+    Qty bid_qty{0};
     Price ask{0};
-    Qty   ask_qty{0};
+    Qty ask_qty{0};
     bool operator==(const Bbo &) const noexcept = default;
   };
 
@@ -64,10 +64,15 @@ public:
   //                  成交事件 → on_trade（加上对应的簿回调）
 
   void apply(const md::Add &a) {
-    if (!derived().price_valid_(a.px)) return;
+    if (!derived().price_valid_(a.px))
+      return;
     const Bbo before = derived().snapshot_bbo();
     Order o{};
-    o.id = a.id; o.side = a.side; o.price = a.px; o.qty = a.qty; o.ts = a.ts;
+    o.id = a.id;
+    o.side = a.side;
+    o.price = a.px;
+    o.qty = a.qty;
+    o.ts = a.ts;
     derived().rest_(o);
     notify_(before);
   }
@@ -93,11 +98,16 @@ public:
   }
 
   void apply(const md::Replace &r) {
-    if (!derived().price_valid_(r.px)) return;
+    if (!derived().price_valid_(r.px))
+      return;
     const Bbo before = derived().snapshot_bbo();
     derived().cancel(r.old_id);
     Order o{};
-    o.id = r.new_id; o.side = r.side; o.price = r.px; o.qty = r.qty; o.ts = r.ts;
+    o.id = r.new_id;
+    o.side = r.side;
+    o.price = r.px;
+    o.qty = r.qty;
+    o.ts = r.ts;
     derived().rest_(o);
     notify_(before);
   }
@@ -122,26 +132,29 @@ protected:
   // Standalone/test constructor: only when Listener is NullListener.
   // 独立/测试构造函数：仅在 Listener 为 NullListener 时可用。
   OrderBookBase()
-      requires std::same_as<Listener, detail::NullListener>
+    requires std::same_as<Listener, detail::NullListener>
       : listener_(&detail::g_null_listener), sym_(0) {}
 
-  // Protected so derived match methods (match_buy_, match_sell_, match_) can invoke it.
-  // protected 使派生类的撮合方法可直接调用。
+  // Protected so derived match methods (match_buy_, match_sell_, match_) can
+  // invoke it. protected 使派生类的撮合方法可直接调用。
   TradeFn on_trade_;
 
 private:
-  Listener *   listener_;
+  Listener *listener_;
   md::SymbolId sym_;
 
-  Derived &      derived() noexcept { return *static_cast<Derived *>(this); }
-  const Derived &derived() const noexcept { return *static_cast<const Derived *>(this); }
+  Derived &derived() noexcept { return *static_cast<Derived *>(this); }
+  const Derived &derived() const noexcept {
+    return *static_cast<const Derived *>(this);
+  }
 
   // Fire on_bbo if the BBO changed, otherwise on_depth.
   // BBO 变动则触发 on_bbo，否则触发 on_depth。
   void notify_(const Bbo &before) noexcept {
     const Bbo after = derived().snapshot_bbo();
     if (after != before)
-      listener_->on_bbo(sym_, after.bid, after.bid_qty, after.ask, after.ask_qty);
+      listener_->on_bbo(sym_, after.bid, after.bid_qty, after.ask,
+                        after.ask_qty);
     else
       listener_->on_depth(sym_, derived());
   }

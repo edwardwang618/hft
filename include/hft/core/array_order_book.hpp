@@ -45,13 +45,14 @@ namespace hft::core {
 //   void on_trade(SymbolId, Price, Qty, TradeId) noexcept
 //
 template <typename Listener = detail::NullListener>
-class ArrayOrderBook : public OrderBookBase<ArrayOrderBook<Listener>, Listener> {
+class ArrayOrderBook
+    : public OrderBookBase<ArrayOrderBook<Listener>, Listener> {
   using Base = OrderBookBase<ArrayOrderBook<Listener>, Listener>;
   friend Base; // Allow base to call private rest_/price_valid_/clear_state_.
                // 允许基类调用私有方法 rest_/price_valid_/clear_state_。
 
 public:
-  using Bbo     = typename Base::Bbo;     // Dependent base name, pull into scope.
+  using Bbo = typename Base::Bbo; // Dependent base name, pull into scope.
   using TradeFn = typename Base::TradeFn; // 依赖基类名，引入当前作用域。
 
   // ── Constructors ──────────────────────────────────────────────────
@@ -59,25 +60,23 @@ public:
 
   // Strategy/production constructor: listener fires on every book event.
   // 策略/生产环境构造函数：每次行情事件均触发监听器。
-  ArrayOrderBook(Listener &l, md::SymbolId sym,
-                 Price min_price, uint32_t num_ticks, Price tick = 1)
-      : Base(l, sym),
-        min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
+  ArrayOrderBook(Listener &l, md::SymbolId sym, Price min_price,
+                 uint32_t num_ticks, Price tick = 1)
+      : Base(l, sym), min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
         bids_(num_ticks), asks_(num_ticks) {}
 
   // Standalone/test constructor: no listener required.
   // 独立/测试构造函数：无需监听器，仅在 NullListener 时可用。
   ArrayOrderBook(Price min_price, uint32_t num_ticks, Price tick = 1)
-      requires std::same_as<Listener, detail::NullListener>
-      : Base(),
-        min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
+    requires std::same_as<Listener, detail::NullListener>
+      : Base(), min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
         bids_(num_ticks), asks_(num_ticks) {}
 
   // ── Core order operations (matching engine path) ──────────────────
   // 核心订单操作（撮合引擎路径）
 
-  // Returns false if o.price is outside [min_price_, min_price_ + num_ticks_*tick_).
-  // 若 o.price 超出价格范围则返回 false。
+  // Returns false if o.price is outside [min_price_, min_price_ +
+  // num_ticks_*tick_). 若 o.price 超出价格范围则返回 false。
   bool add_limit(Order o);
   bool cancel(OrderId id);
   bool reduce(OrderId id, Qty new_qty) noexcept;
@@ -87,15 +86,17 @@ public:
   // 查询接口
 
   std::optional<Price> best_bid() const noexcept {
-    if (best_bid_slot_ < 0) return std::nullopt;
+    if (best_bid_slot_ < 0)
+      return std::nullopt;
     return slot_to_price(static_cast<uint32_t>(best_bid_slot_));
   }
   std::optional<Price> best_ask() const noexcept {
-    if (best_ask_slot_ < 0) return std::nullopt;
+    if (best_ask_slot_ < 0)
+      return std::nullopt;
     return slot_to_price(static_cast<uint32_t>(best_ask_slot_));
   }
 
-  Qty         qty_at(Side s, Price price) const noexcept;
+  Qty qty_at(Side s, Price price) const noexcept;
   std::size_t num_orders() const noexcept { return id_index_.size(); }
   std::size_t num_bid_levels() const noexcept { return num_bid_levels_; }
   std::size_t num_ask_levels() const noexcept { return num_ask_levels_; }
@@ -104,12 +105,12 @@ public:
     Bbo b;
     if (best_bid_slot_ >= 0) {
       const uint32_t s = static_cast<uint32_t>(best_bid_slot_);
-      b.bid     = slot_to_price(s);
+      b.bid = slot_to_price(s);
       b.bid_qty = bids_[s].total_qty;
     }
     if (best_ask_slot_ >= 0) {
       const uint32_t s = static_cast<uint32_t>(best_ask_slot_);
-      b.ask     = slot_to_price(s);
+      b.ask = slot_to_price(s);
       b.ask_qty = asks_[s].total_qty;
     }
     return b;
@@ -118,13 +119,13 @@ public:
 private:
   // One slot per price point on each side.
   // 每个价格点对应一个槽位（买卖两侧各自独立）。
-  // Cancelled orders are tombstoned (qty=0); head advances past consumed entries.
-  // Compaction runs when waste exceeds a threshold (amortised O(1)).
+  // Cancelled orders are tombstoned (qty=0); head advances past consumed
+  // entries. Compaction runs when waste exceeds a threshold (amortised O(1)).
   // 已撤订单以墓碑标记（qty=0）；head 向前推进跳过已消耗条目。
   // 废弃条目超过阈值时执行压缩（摊销 O(1)）。
   struct Slot {
-    Qty              total_qty{0};
-    uint32_t         head{0};
+    Qty total_qty{0};
+    uint32_t head{0};
     std::vector<Order> queue;
     bool empty() const noexcept { return total_qty == 0; }
   };
@@ -132,17 +133,19 @@ private:
   // Points directly to an order in O(1) without any tree traversal.
   // O(1) 直接定位订单，无需树遍历。
   struct Locator {
-    Side     side;
+    Side side;
     uint32_t slot;
     uint32_t queue_idx;
   };
 
-  Price    min_price_;
-  Price    tick_;
+  Price min_price_;
+  Price tick_;
   uint32_t num_ticks_;
 
-  std::vector<Slot> bids_; // bids_[slot]: higher slot = higher price / 槽位越高价格越高
-  std::vector<Slot> asks_; // asks_[slot]: lower  slot = lower  price / 槽位越低价格越低
+  std::vector<Slot>
+      bids_; // bids_[slot]: higher slot = higher price / 槽位越高价格越高
+  std::vector<Slot>
+      asks_; // asks_[slot]: lower  slot = lower  price / 槽位越低价格越低
 
   int32_t best_bid_slot_{-1}; // -1 = empty / -1 表示该方向为空
   int32_t best_ask_slot_{-1};
@@ -167,7 +170,9 @@ private:
 
   // Returns false when price is outside the pre-allocated slot range.
   // 价格超出预分配槽位范围时返回 false。
-  bool price_valid_(Price p) const noexcept { return price_to_slot(p) < num_ticks_; }
+  bool price_valid_(Price p) const noexcept {
+    return price_to_slot(p) < num_ticks_;
+  }
 
   // Reset all book state (called by apply(Clear)).
   // 清空所有簿状态（由 apply(Clear) 调用）。
@@ -239,16 +244,23 @@ private:
       if (taker.price < slot_to_price(sidx))
         break;
       Slot &sl = asks_[sidx];
-      while (taker.qty > 0 && sl.head < static_cast<uint32_t>(sl.queue.size())) {
+      while (taker.qty > 0 &&
+             sl.head < static_cast<uint32_t>(sl.queue.size())) {
         Order &maker = sl.queue[sl.head];
-        if (maker.qty == 0) { ++sl.head; continue; }
+        if (maker.qty == 0) {
+          ++sl.head;
+          continue;
+        }
         const Qty traded = std::min(taker.qty, maker.qty);
         if (this->on_trade_)
           this->on_trade_(maker.id, taker.id, slot_to_price(sidx), traded);
         taker.qty -= traded;
         maker.qty -= traded;
         sl.total_qty -= traded;
-        if (maker.qty == 0) { id_index_.erase(maker.id); ++sl.head; }
+        if (maker.qty == 0) {
+          id_index_.erase(maker.id);
+          ++sl.head;
+        }
       }
       if (sl.empty()) {
         --num_ask_levels_;
@@ -266,16 +278,23 @@ private:
       if (taker.price > slot_to_price(sidx))
         break;
       Slot &sl = bids_[sidx];
-      while (taker.qty > 0 && sl.head < static_cast<uint32_t>(sl.queue.size())) {
+      while (taker.qty > 0 &&
+             sl.head < static_cast<uint32_t>(sl.queue.size())) {
         Order &maker = sl.queue[sl.head];
-        if (maker.qty == 0) { ++sl.head; continue; }
+        if (maker.qty == 0) {
+          ++sl.head;
+          continue;
+        }
         const Qty traded = std::min(taker.qty, maker.qty);
         if (this->on_trade_)
           this->on_trade_(maker.id, taker.id, slot_to_price(sidx), traded);
         taker.qty -= traded;
         maker.qty -= traded;
         sl.total_qty -= traded;
-        if (maker.qty == 0) { id_index_.erase(maker.id); ++sl.head; }
+        if (maker.qty == 0) {
+          id_index_.erase(maker.id);
+          ++sl.head;
+        }
       }
       if (sl.empty()) {
         --num_bid_levels_;
@@ -297,8 +316,8 @@ inline void ArrayOrderBook<Listener>::rest_(Order o) {
 
   if (o.side == Side::Buy) {
     Slot &sl = bids_[sidx];
-    const bool     was_empty = sl.empty();
-    const uint32_t qidx      = static_cast<uint32_t>(sl.queue.size());
+    const bool was_empty = sl.empty();
+    const uint32_t qidx = static_cast<uint32_t>(sl.queue.size());
     sl.total_qty += o.qty;
     sl.queue.push_back(o);
     id_index_.emplace(o.id, Locator{Side::Buy, sidx, qidx});
@@ -309,8 +328,8 @@ inline void ArrayOrderBook<Listener>::rest_(Order o) {
     }
   } else {
     Slot &sl = asks_[sidx];
-    const bool     was_empty = sl.empty();
-    const uint32_t qidx      = static_cast<uint32_t>(sl.queue.size());
+    const bool was_empty = sl.empty();
+    const uint32_t qidx = static_cast<uint32_t>(sl.queue.size());
     sl.total_qty += o.qty;
     sl.queue.push_back(o);
     id_index_.emplace(o.id, Locator{Side::Sell, sidx, qidx});
@@ -350,7 +369,7 @@ inline bool ArrayOrderBook<Listener>::cancel(OrderId id) {
   const Locator loc = it->second;
   id_index_.erase(it);
 
-  Slot  &sl  = (loc.side == Side::Buy) ? bids_[loc.slot] : asks_[loc.slot];
+  Slot &sl = (loc.side == Side::Buy) ? bids_[loc.slot] : asks_[loc.slot];
   Order &ord = sl.queue[loc.queue_idx];
   sl.total_qty -= ord.qty;
   ord.qty = 0; // tombstone / 墓碑标记
@@ -379,7 +398,7 @@ inline bool ArrayOrderBook<Listener>::reduce(OrderId id, Qty new_qty) noexcept {
     return false;
 
   const Locator &loc = it->second;
-  Slot  &sl  = (loc.side == Side::Buy) ? bids_[loc.slot] : asks_[loc.slot];
+  Slot &sl = (loc.side == Side::Buy) ? bids_[loc.slot] : asks_[loc.slot];
   Order &ord = sl.queue[loc.queue_idx];
 
   if (new_qty == 0 || new_qty >= ord.qty)
@@ -394,13 +413,14 @@ inline bool ArrayOrderBook<Listener>::reduce(OrderId id, Qty new_qty) noexcept {
 // 被动成交：从挂单扣除 exec_qty
 
 template <typename Listener>
-inline bool ArrayOrderBook<Listener>::execute(OrderId id, Qty exec_qty) noexcept {
+inline bool ArrayOrderBook<Listener>::execute(OrderId id,
+                                              Qty exec_qty) noexcept {
   auto it = id_index_.find(id);
   if (it == id_index_.end())
     return false;
 
   const Locator loc = it->second;
-  Slot  &sl  = (loc.side == Side::Buy) ? bids_[loc.slot] : asks_[loc.slot];
+  Slot &sl = (loc.side == Side::Buy) ? bids_[loc.slot] : asks_[loc.slot];
   Order &ord = sl.queue[loc.queue_idx];
 
   if (exec_qty == 0 || exec_qty > ord.qty)
@@ -430,7 +450,8 @@ inline bool ArrayOrderBook<Listener>::execute(OrderId id, Qty exec_qty) noexcept
 // 查询指定价格的总挂单量
 
 template <typename Listener>
-inline Qty ArrayOrderBook<Listener>::qty_at(Side s, Price price) const noexcept {
+inline Qty ArrayOrderBook<Listener>::qty_at(Side s,
+                                            Price price) const noexcept {
   const uint32_t sidx = price_to_slot(price);
   if (sidx >= num_ticks_)
     return 0;

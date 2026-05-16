@@ -21,7 +21,7 @@ namespace hft::core {
 // ─── A single price level: iterator-stable FIFO of orders ─────────────
 // 单个价格档位：迭代器稳定的 FIFO 订单队列
 struct PriceLevel {
-  Qty              total_qty{0};
+  Qty total_qty{0};
   std::list<Order> orders; // iterator-stable FIFO / 迭代器稳定的 FIFO
 };
 
@@ -34,9 +34,10 @@ struct PriceLevel {
 //
 // Compared to ArrayOrderBook:
 // 与 ArrayOrderBook 对比：
-//   Level lookup : O(log N)  vs O(1) array index     / O(log N) vs O(1) 数组索引
-//   Best bid/ask : O(log N)  vs O(1) maintained int  / O(log N) vs O(1) 整数维护
-//   Price range  : unbounded vs fixed window          / 无界      vs 固定窗口
+//   Level lookup : O(log N)  vs O(1) array index     / O(log N) vs O(1)
+//   数组索引 Best bid/ask : O(log N)  vs O(1) maintained int  / O(log N) vs
+//   O(1) 整数维护 Price range  : unbounded vs fixed window          / 无界 vs
+//   固定窗口
 //
 // Listener contract (template — zero virtual, fully inlinable):
 // 监听器接口（模板，无虚函数，全链路可内联）：
@@ -51,7 +52,7 @@ class MapOrderBook : public OrderBookBase<MapOrderBook<Listener>, Listener> {
                // 允许基类调用私有方法 rest_/price_valid_/clear_state_。
 
 public:
-  using Bbo     = typename Base::Bbo;     // Dependent base name, pull into scope.
+  using Bbo = typename Base::Bbo; // Dependent base name, pull into scope.
   using TradeFn = typename Base::TradeFn; // 依赖基类名，引入当前作用域。
 
   // ── Constructors ─────────────────────────────────────────────────
@@ -64,7 +65,7 @@ public:
   // Standalone/test constructor: only when Listener is NullListener.
   // 独立/测试构造函数：仅在 Listener 为 NullListener 时可用。
   MapOrderBook()
-      requires std::same_as<Listener, detail::NullListener>
+    requires std::same_as<Listener, detail::NullListener>
       : Base() {}
 
   // ── Core order operations (matching engine path) ──────────────────
@@ -100,7 +101,7 @@ public:
     return asks_.empty() ? std::nullopt : std::optional{asks_.begin()->first};
   }
 
-  Qty         qty_at(Side s, Price price) const;
+  Qty qty_at(Side s, Price price) const;
   std::size_t num_orders() const noexcept { return id_index_.size(); }
   std::size_t num_bid_levels() const noexcept { return bids_.size(); }
   std::size_t num_ask_levels() const noexcept { return asks_.size(); }
@@ -108,13 +109,13 @@ public:
   Bbo snapshot_bbo() const noexcept {
     Bbo b;
     if (!bids_.empty()) {
-      auto it   = bids_.begin();
-      b.bid     = it->first;
+      auto it = bids_.begin();
+      b.bid = it->first;
       b.bid_qty = it->second.total_qty;
     }
     if (!asks_.empty()) {
-      auto it   = asks_.begin();
-      b.ask     = it->first;
+      auto it = asks_.begin();
+      b.ask = it->first;
       b.ask_qty = it->second.total_qty;
     }
     return b;
@@ -129,9 +130,10 @@ private:
   using AskMap = std::map<Price, PriceLevel, std::less<Price>>;
 
   struct Locator {
-    Side                     side;
-    Price                    price;
-    std::list<Order>::iterator it; // stable as long as list isn't erased / 只要列表不被删除则稳定
+    Side side;
+    Price price;
+    std::list<Order>::iterator
+        it; // stable as long as list isn't erased / 只要列表不被删除则稳定
   };
 
   BidMap bids_;
@@ -158,8 +160,7 @@ private:
   // ── Internal matching (add_limit path) ───────────────────────────
   // 内部撮合（add_limit 路径）
 
-  template <typename OppMap>
-  void match_(OppMap &opp, Order &taker);
+  template <typename OppMap> void match_(OppMap &opp, Order &taker);
 };
 
 // ─── match_ ───────────────────────────────────────────────────────────
@@ -169,15 +170,15 @@ template <typename Listener>
 template <typename OppMap>
 void MapOrderBook<Listener>::match_(OppMap &opp, Order &taker) {
   while (taker.qty > 0 && !opp.empty()) {
-    auto        lvl_it = opp.begin();
-    const Price best   = lvl_it->first;
-    const bool  crosses =
-        (taker.side == Side::Buy) ? (taker.price >= best) : (taker.price <= best);
+    auto lvl_it = opp.begin();
+    const Price best = lvl_it->first;
+    const bool crosses = (taker.side == Side::Buy) ? (taker.price >= best)
+                                                   : (taker.price <= best);
     if (!crosses)
       break;
     auto &lvl = lvl_it->second;
     while (taker.qty > 0 && !lvl.orders.empty()) {
-      Order    &maker  = lvl.orders.front();
+      Order &maker = lvl.orders.front();
       const Qty traded = (taker.qty < maker.qty) ? taker.qty : maker.qty;
       if (this->on_trade_)
         this->on_trade_(maker.id, taker.id, best, traded);
@@ -203,12 +204,14 @@ inline void MapOrderBook<Listener>::rest_(Order o) {
     auto &lvl = bids_[o.price];
     lvl.orders.push_back(o);
     lvl.total_qty += o.qty;
-    id_index_.emplace(o.id, Locator{Side::Buy, o.price, std::prev(lvl.orders.end())});
+    id_index_.emplace(o.id,
+                      Locator{Side::Buy, o.price, std::prev(lvl.orders.end())});
   } else {
     auto &lvl = asks_[o.price];
     lvl.orders.push_back(o);
     lvl.total_qty += o.qty;
-    id_index_.emplace(o.id, Locator{Side::Sell, o.price, std::prev(lvl.orders.end())});
+    id_index_.emplace(
+        o.id, Locator{Side::Sell, o.price, std::prev(lvl.orders.end())});
   }
 }
 
@@ -260,12 +263,12 @@ inline bool MapOrderBook<Listener>::reduce(OrderId id, Qty new_qty) noexcept {
   auto hit = id_index_.find(id);
   if (hit == id_index_.end())
     return false;
-  const Locator &loc   = hit->second;
-  Order         &ord   = *loc.it;
+  const Locator &loc = hit->second;
+  Order &ord = *loc.it;
   if (new_qty == 0 || new_qty >= ord.qty)
     return false;
   const Qty delta = ord.qty - new_qty;
-  ord.qty         = new_qty;
+  ord.qty = new_qty;
   if (loc.side == Side::Buy)
     bids_.find(loc.price)->second.total_qty -= delta;
   else
@@ -282,7 +285,7 @@ inline bool MapOrderBook<Listener>::execute(OrderId id, Qty exec_qty) noexcept {
   if (hit == id_index_.end())
     return false;
   const Locator loc = hit->second;
-  Order        &ord = *loc.it;
+  Order &ord = *loc.it;
   if (exec_qty == 0 || exec_qty > ord.qty)
     return false;
   ord.qty -= exec_qty;

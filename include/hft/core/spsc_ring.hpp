@@ -14,20 +14,21 @@ namespace hft::core {
 // C++17 gives us std::hardware_destructive_interference_size, but libstdc++
 // guards it behind a feature test. 64 bytes is correct for x86_64 and all
 // common ARM64 chips (Apple M-series, Graviton, Cortex-A7x, ...).
-// C++17 提供了 std::hardware_destructive_interference_size，但 libstdc++ 将其置于
-// 特性检测宏之后。64 字节对 x86_64 及常见 ARM64 芯片（苹果 M 系列、Graviton 等）均正确。
+// C++17 提供了 std::hardware_destructive_interference_size，但 libstdc++
+// 将其置于 特性检测宏之后。64 字节对 x86_64 及常见 ARM64 芯片（苹果 M
+// 系列、Graviton 等）均正确。
 #ifdef __cpp_lib_hardware_interference_size
 // -Winterference-size is GCC-specific; clang doesn't know the group.
 // -Winterference-size 是 GCC 专属警告组；Clang 不识别，需条件编译保护。
-#  if defined(__GNUC__) && !defined(__clang__)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Winterference-size"
-#  endif
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
+#endif
 inline constexpr std::size_t kCacheLine =
     std::hardware_destructive_interference_size;
-#  if defined(__GNUC__) && !defined(__clang__)
-#    pragma GCC diagnostic pop
-#  endif
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #else
 inline constexpr std::size_t kCacheLine = 64;
 #endif
@@ -43,9 +44,10 @@ inline constexpr std::size_t kCacheLine = 64;
 //
 // Layout:
 // 内存布局：
-//   [ buffer ................................ ]   (shared, read-mostly / 共享，以读为主)
-//   [ head + cached_tail   (padded) ......... ]   (producer cache line / 生产者缓存行)
-//   [ tail + cached_head   (padded) ......... ]   (consumer cache line / 消费者缓存行)
+//   [ buffer ................................ ]   (shared, read-mostly /
+//   共享，以读为主) [ head + cached_tail   (padded) ......... ]   (producer
+//   cache line / 生产者缓存行) [ tail + cached_head   (padded) ......... ]
+//   (consumer cache line / 消费者缓存行)
 //
 // Why cached indices? In steady state, producer only reads head_ (its own
 // cache) and checks fullness against cached_tail_; only reloads the real
@@ -53,9 +55,8 @@ inline constexpr std::size_t kCacheLine = 64;
 // 为何使用缓存索引？稳态下生产者仅读取自身 head_ 并用 cached_tail_ 判断是否满，
 // 仅在缓存显示"满"时才重新加载真实的 tail_，避免每次 push 引发缓存行弹跳。
 //
-template <typename T, std::size_t N>
-class SpscRing {
-  static_assert(N >= 2,              "N must be >= 2");
+template <typename T, std::size_t N> class SpscRing {
+  static_assert(N >= 2, "N must be >= 2");
   static_assert((N & (N - 1)) == 0, "N must be power of 2");
   static_assert(std::is_trivially_copyable_v<T>,
                 "T should be trivially copyable for HFT paths");
@@ -73,8 +74,8 @@ public:
     const auto head = head_.load(std::memory_order_relaxed);
     const auto next = (head + 1) & kMask;
 
-    // Fast path: check cached tail first; reload real tail only if it says full.
-    // 快路径：先检查缓存的 tail；仅在缓存显示满时才重新加载真实 tail。
+    // Fast path: check cached tail first; reload real tail only if it says
+    // full. 快路径：先检查缓存的 tail；仅在缓存显示满时才重新加载真实 tail。
     if (next == cached_tail_) {
       // acquire pairs with consumer's release-store when it advances tail_.
       // acquire 与消费者推进 tail_ 时的 release-store 配对。

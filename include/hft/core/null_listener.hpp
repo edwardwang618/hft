@@ -12,8 +12,7 @@ namespace hft::core::detail {
 // 当订单簿不附带策略时使用。
 struct NullListener {
   void on_bbo(md::SymbolId, Price, Qty, Price, Qty) noexcept {}
-  template <class Book>
-  void on_depth(md::SymbolId, const Book &) noexcept {}
+  template <class Book> void on_depth(md::SymbolId, const Book &) noexcept {}
   void on_trade(md::SymbolId, Price, Qty, md::TradeId) noexcept {}
 };
 

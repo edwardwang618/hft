@@ -1,5 +1,4 @@
 #pragma once
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <hft/exchange/byte_sink.hpp>

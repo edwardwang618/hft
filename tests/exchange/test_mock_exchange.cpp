@@ -21,7 +21,8 @@ struct RecordingSink {
 TEST(MockExchange, ScriptedRoundTripBinary) {
   RecordingSink rec;
   pipeline::FeedHandler<RecordingSink, md::BinaryParser> fh{rec};
-  exchange::DirectSink<pipeline::FeedHandler<RecordingSink, md::BinaryParser>> sink{fh};
+  exchange::DirectSink<pipeline::FeedHandler<RecordingSink, md::BinaryParser>>
+      sink{fh};
   exchange::BinarySerializer ser;
   exchange::MockExchange mx{sink, ser, /*start_seq=*/100};
 
