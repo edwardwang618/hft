@@ -1,10 +1,11 @@
 #pragma once
 
-#include <hft/core/map_order_book.hpp>
-#include <hft/md/md_event.hpp>
 #include <concepts>
 #include <cstdlib>
+#include <exception>
 #include <functional>
+#include <hft/core/map_order_book.hpp>
+#include <hft/md/md_event.hpp>
 #include <optional>
 #include <unordered_map>
 #include <utility>
@@ -45,7 +46,7 @@ public:
   // factory overload below wins for lambdas and std::function arguments.
   template <class First, class... Rest>
   explicit BookBuilder(First &&first, Rest &&...rest)
-      requires(!std::convertible_to<std::decay_t<First>, BookFactory>)
+    requires(!std::convertible_to<std::decay_t<First>, BookFactory>)
       : next_(std::forward<First>(first), std::forward<Rest>(rest)...) {}
 
   explicit BookBuilder() : next_() {}
@@ -93,10 +94,7 @@ private:
   }
 
   // Generic: apply the event (fires listener callbacks if book has one).
-  template <class Ev>
-  void dispatch(const Ev &ev) {
-    book_of(ev.sym).apply(ev);
-  }
+  template <class Ev> void dispatch(const Ev &ev) { book_of(ev.sym).apply(ev); }
 
   // Clear fires the listener's on_bbo (empty BBO) then removes the book entry.
   void dispatch(const md::Clear &c) {

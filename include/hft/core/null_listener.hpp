@@ -1,3 +1,6 @@
+// include/hft/core/null_listener.hpp
+// Default no-op listener; satisfies the Listener concept with zero overhead.
+// 默认空监听器；以零开销满足 Listener 接口约束。
 #pragma once
 
 #include <hft/core/types.hpp>
@@ -5,8 +8,8 @@
 
 namespace hft::core::detail {
 
-// Default no-op listener used when no strategy is attached.
-// Satisfies the Listener concept required by both MapOrderBook and ArrayOrderBook.
+// Used when no strategy is attached to a book.
+// 当订单簿不附带策略时使用。
 struct NullListener {
   void on_bbo(md::SymbolId, Price, Qty, Price, Qty) noexcept {}
   template <class Book>
