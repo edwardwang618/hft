@@ -1,6 +1,6 @@
 #include <cstddef>
 #include <cstdint>
-#include <hft/core/order_book.hpp>
+#include <hft/core/map_order_book.hpp>
 #include <hft/md/md_event.hpp>
 #include <hft/pipeline/book_builder.hpp>
 
@@ -28,7 +28,7 @@ struct SpyStage {
   std::vector<Call> calls;
 
   void on_md(std::uint64_t seq, const md::MdEvent &e,
-             const std::unordered_map<md::SymbolId, hft::core::OrderBook>
+             const std::unordered_map<md::SymbolId, hft::core::MapOrderBook<>>
                  &books) noexcept {
     Call c{seq, e, {}};
     for (auto &[s, b] : books) {

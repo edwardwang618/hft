@@ -2,7 +2,7 @@ add_executable(test_core
   test_types.cpp
   test_clock.cpp
   test_spsc_ring.cpp
-  test_order_book.cpp
+  test_map_order_book.cpp
   test_array_order_book.cpp
 )
 find_package(Threads REQUIRED)

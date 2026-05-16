@@ -1,11 +1,11 @@
 #include "wire_fixtures.hpp"
 
 #include <cstdint>
-#include <hft/core/order_book.hpp>
+#include <hft/core/map_order_book.hpp>
 #include <hft/md/binary_parser.hpp>
-#include <hft/pipeline/feed_handler.hpp>
 #include <hft/md/md_event.hpp>
 #include <hft/pipeline/book_builder.hpp>
+#include <hft/pipeline/feed_handler.hpp>
 
 #include <gtest/gtest.h>
 
@@ -25,13 +25,13 @@ namespace {
 // 终端 stage: BookBuilder 的 Next 要求 on_md(ev, books), 这里空实现.
 struct NullTerminal {
   void on_md(std::uint64_t, const hft::md::MdEvent &,
-             const std::unordered_map<hft::md::SymbolId, hft::core::OrderBook>
-                 &) noexcept {}
+             const std::unordered_map<hft::md::SymbolId,
+                                      hft::core::MapOrderBook<>> &) noexcept {}
 };
 
 using Pipe = hft::pipeline::BookBuilder<NullTerminal>;
 
-const hft::core::OrderBook &book_at(const Pipe &p, hft::md::SymbolId s) {
+const hft::core::MapOrderBook<> &book_at(const Pipe &p, hft::md::SymbolId s) {
   return p.books().at(s);
 }
 
