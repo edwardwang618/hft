@@ -13,8 +13,13 @@ namespace hft::core {
 // guards it behind a feature test. 64 is correct for all x86_64 and every
 // ARM64 chip I know of (Apple M-series, Graviton, Cortex-A7x, ...).
 #ifdef __cpp_lib_hardware_interference_size
+// -Winterference-size fires on any use of the stdlib name, even to initialize
+// a user-defined constant. Suppress it here; all callers use kCacheLine.
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Winterference-size"
 inline constexpr std::size_t kCacheLine =
     std::hardware_destructive_interference_size;
+#  pragma GCC diagnostic pop
 #else
 inline constexpr std::size_t kCacheLine = 64;
 #endif
