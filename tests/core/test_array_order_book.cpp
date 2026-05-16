@@ -10,7 +10,7 @@ using namespace hft::core;
 namespace {
 
 // Price range: 1 – 20000, tick = 1.
-ArrayOrderBook make_book() { return ArrayOrderBook(1, 20000, 1); }
+ArrayOrderBook<> make_book() { return ArrayOrderBook<>(1, 20000, 1); }
 
 Order mk(OrderId id, Side s, Price px, Qty q, Ts t = 0) {
   Order o{};

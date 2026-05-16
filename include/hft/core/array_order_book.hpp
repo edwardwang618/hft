@@ -1,9 +1,12 @@
 // include/hft/core/array_order_book.hpp
 #pragma once
 
+#include "hft/core/null_listener.hpp"
 #include "hft/core/types.hpp"
+#include "hft/md/md_event.hpp"
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -13,6 +16,8 @@
 
 namespace hft::core {
 
+// ─── ArrayOrderBook ───────────────────────────────────────────────────
+//
 // Order book backed by a flat price-indexed array.
 //
 // Compared to the std::map-based OrderBook:
@@ -22,18 +27,52 @@ namespace hft::core {
 //   Compaction of consumed/cancelled slots is amortised O(1) per order.
 //
 // Trade-off: requires knowing the price range at construction.
-//   min_price – lowest supported price (scaled integer, inclusive)
-//   num_ticks – number of distinct price points  (array length)
-//   tick      – spacing between adjacent prices  (default 1)
+//
+// Listener contract (template — no virtual, compiler can inline the whole chain):
+//   void on_bbo(SymbolId, Price bid, Qty bid_qty, Price ask, Qty ask_qty) noexcept
+//   template<class Book> void on_depth(SymbolId, const Book&) noexcept
+//   void on_trade(SymbolId, Price, Qty, TradeId) noexcept
+//
+// Dispatch rules (mutually exclusive per event):
+//   BBO changed  → on_bbo only
+//   BBO stable   → on_depth only
+//   Trade event  → on_trade (in addition to whichever book callback fires)
+//
+template <typename Listener = detail::NullListener>
 class ArrayOrderBook {
 public:
   using TradeFn = std::function<void(OrderId maker, OrderId taker, Price, Qty)>;
 
-  ArrayOrderBook(Price min_price, uint32_t num_ticks, Price tick = 1)
-      : min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
+  // BBO snapshot: 0 on a side means that side is empty.
+  struct Bbo {
+    Price bid{0};
+    Qty   bid_qty{0};
+    Price ask{0};
+    Qty   ask_qty{0};
+    bool operator==(const Bbo &) const noexcept = default;
+  };
+
+  // ── Constructors ──────────────────────────────────────────────────
+
+  // Strategy/production constructor: listener is called on every book event.
+  ArrayOrderBook(Listener &l, md::SymbolId sym,
+                 Price min_price, uint32_t num_ticks, Price tick = 1)
+      : listener_(&l), sym_(sym),
+        min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
         bids_(num_ticks), asks_(num_ticks) {}
 
+  // Standalone/test constructor: no listener required.
+  // Only available when Listener is the NullListener default.
+  ArrayOrderBook(Price min_price, uint32_t num_ticks, Price tick = 1)
+      requires std::same_as<Listener, detail::NullListener>
+      : listener_(&detail::g_null_listener), sym_(0),
+        min_price_(min_price), tick_(tick), num_ticks_(num_ticks),
+        bids_(num_ticks), asks_(num_ticks) {}
+
+  // ── Trade callback (used by the standalone matching engine path) ──
   void set_trade_callback(TradeFn fn) { on_trade_ = std::move(fn); }
+
+  // ── Core order operations ─────────────────────────────────────────
 
   // Returns false if o.price is outside [min_price_, min_price_ + num_ticks_*tick_).
   bool add_limit(Order o);
@@ -41,14 +80,26 @@ public:
   bool reduce(OrderId id, Qty new_qty) noexcept;
   bool execute(OrderId id, Qty exec_qty) noexcept;
 
+  // ── Market-data apply interface ──────────────────────────────────
+  // Mutate the book from a feed event and fire listener callbacks.
+  // apply(Add) rests the order without internal crossing (MD path).
+
+  void apply(const md::Add &a);
+  void apply(const md::Cancel &c);
+  void apply(const md::Reduce &r);
+  void apply(const md::Exec &x);
+  void apply(const md::Replace &r);
+  void apply(const md::Trade &t);
+  void apply(const md::Clear &);
+
+  // ── Queries ──────────────────────────────────────────────────────
+
   std::optional<Price> best_bid() const noexcept {
-    if (best_bid_slot_ < 0)
-      return std::nullopt;
+    if (best_bid_slot_ < 0) return std::nullopt;
     return slot_to_price(static_cast<uint32_t>(best_bid_slot_));
   }
   std::optional<Price> best_ask() const noexcept {
-    if (best_ask_slot_ < 0)
-      return std::nullopt;
+    if (best_ask_slot_ < 0) return std::nullopt;
     return slot_to_price(static_cast<uint32_t>(best_ask_slot_));
   }
 
@@ -56,6 +107,21 @@ public:
   std::size_t num_orders() const noexcept { return id_index_.size(); }
   std::size_t num_bid_levels() const noexcept { return num_bid_levels_; }
   std::size_t num_ask_levels() const noexcept { return num_ask_levels_; }
+
+  Bbo snapshot_bbo() const noexcept {
+    Bbo b;
+    if (best_bid_slot_ >= 0) {
+      const uint32_t s = static_cast<uint32_t>(best_bid_slot_);
+      b.bid     = slot_to_price(s);
+      b.bid_qty = bids_[s].total_qty;
+    }
+    if (best_ask_slot_ >= 0) {
+      const uint32_t s = static_cast<uint32_t>(best_ask_slot_);
+      b.ask     = slot_to_price(s);
+      b.ask_qty = asks_[s].total_qty;
+    }
+    return b;
+  }
 
 private:
   // One slot per price point on each side.
@@ -76,6 +142,9 @@ private:
     uint32_t queue_idx;
   };
 
+  Listener *listener_;
+  md::SymbolId sym_;
+
   Price min_price_;
   Price tick_;
   uint32_t num_ticks_;
@@ -91,13 +160,22 @@ private:
   std::size_t num_ask_levels_{0};
 
   std::unordered_map<OrderId, Locator> id_index_;
-  TradeFn on_trade_;
+  TradeFn on_trade_; // optional matching-engine callback
 
   uint32_t price_to_slot(Price p) const noexcept {
     return static_cast<uint32_t>((p - min_price_) / tick_);
   }
   Price slot_to_price(uint32_t s) const noexcept {
     return min_price_ + static_cast<Price>(s) * tick_;
+  }
+
+  // Fire on_bbo or on_depth depending on whether the BBO moved.
+  void notify_(const Bbo &before) noexcept {
+    const Bbo after = snapshot_bbo();
+    if (after != before)
+      listener_->on_bbo(sym_, after.bid, after.bid_qty, after.ask, after.ask_qty);
+    else
+      listener_->on_depth(sym_, *this);
   }
 
   // Remove the consumed prefix of sl.queue when waste exceeds threshold.
@@ -225,7 +303,10 @@ private:
   }
 };
 
-inline void ArrayOrderBook::rest_(Order o) {
+// ─── rest_ ────────────────────────────────────────────────────────────
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::rest_(Order o) {
   const uint32_t sidx = price_to_slot(o.price);
 
   if (o.side == Side::Buy) {
@@ -255,7 +336,10 @@ inline void ArrayOrderBook::rest_(Order o) {
   }
 }
 
-inline bool ArrayOrderBook::add_limit(Order o) {
+// ─── add_limit ────────────────────────────────────────────────────────
+
+template <typename Listener>
+inline bool ArrayOrderBook<Listener>::add_limit(Order o) {
   if (price_to_slot(o.price) >= num_ticks_)
     return false;
   if (o.side == Side::Buy)
@@ -267,7 +351,10 @@ inline bool ArrayOrderBook::add_limit(Order o) {
   return true;
 }
 
-inline bool ArrayOrderBook::cancel(OrderId id) {
+// ─── cancel ───────────────────────────────────────────────────────────
+
+template <typename Listener>
+inline bool ArrayOrderBook<Listener>::cancel(OrderId id) {
   auto it = id_index_.find(id);
   if (it == id_index_.end())
     return false;
@@ -294,7 +381,10 @@ inline bool ArrayOrderBook::cancel(OrderId id) {
   return true;
 }
 
-inline bool ArrayOrderBook::reduce(OrderId id, Qty new_qty) noexcept {
+// ─── reduce ───────────────────────────────────────────────────────────
+
+template <typename Listener>
+inline bool ArrayOrderBook<Listener>::reduce(OrderId id, Qty new_qty) noexcept {
   auto it = id_index_.find(id);
   if (it == id_index_.end())
     return false;
@@ -311,7 +401,10 @@ inline bool ArrayOrderBook::reduce(OrderId id, Qty new_qty) noexcept {
   return true;
 }
 
-inline bool ArrayOrderBook::execute(OrderId id, Qty exec_qty) noexcept {
+// ─── execute ──────────────────────────────────────────────────────────
+
+template <typename Listener>
+inline bool ArrayOrderBook<Listener>::execute(OrderId id, Qty exec_qty) noexcept {
   auto it = id_index_.find(id);
   if (it == id_index_.end())
     return false;
@@ -343,12 +436,79 @@ inline bool ArrayOrderBook::execute(OrderId id, Qty exec_qty) noexcept {
   return true;
 }
 
-inline Qty ArrayOrderBook::qty_at(Side s, Price price) const noexcept {
+// ─── qty_at ───────────────────────────────────────────────────────────
+
+template <typename Listener>
+inline Qty ArrayOrderBook<Listener>::qty_at(Side s, Price price) const noexcept {
   const uint32_t sidx = price_to_slot(price);
   if (sidx >= num_ticks_)
     return 0;
   const Slot &sl = (s == Side::Buy) ? bids_[sidx] : asks_[sidx];
   return sl.total_qty;
+}
+
+// ─── apply (market-data interface) ────────────────────────────────────
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Add &a) {
+  if (price_to_slot(a.px) >= num_ticks_) return;
+  const Bbo before = snapshot_bbo();
+  Order o{};
+  o.id = a.id; o.side = a.side; o.price = a.px; o.qty = a.qty; o.ts = a.ts;
+  rest_(o);
+  notify_(before);
+}
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Cancel &c) {
+  const Bbo before = snapshot_bbo();
+  if (cancel(c.id))
+    notify_(before);
+}
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Reduce &r) {
+  const Bbo before = snapshot_bbo();
+  if (reduce(r.id, r.new_qty))
+    notify_(before);
+}
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Exec &x) {
+  const Bbo before = snapshot_bbo();
+  if (execute(x.id, x.exec_qty)) {
+    listener_->on_trade(sym_, x.px, x.exec_qty, x.trade_id);
+    notify_(before);
+  }
+}
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Replace &r) {
+  if (price_to_slot(r.px) >= num_ticks_) return;
+  const Bbo before = snapshot_bbo();
+  cancel(r.old_id);
+  Order o{};
+  o.id = r.new_id; o.side = r.side; o.price = r.px; o.qty = r.qty; o.ts = r.ts;
+  rest_(o);
+  notify_(before);
+}
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Trade &t) {
+  listener_->on_trade(sym_, t.px, t.qty, t.trade_id);
+}
+
+template <typename Listener>
+inline void ArrayOrderBook<Listener>::apply(const md::Clear &) {
+  const Bbo before = snapshot_bbo();
+  bids_.assign(num_ticks_, Slot{});
+  asks_.assign(num_ticks_, Slot{});
+  best_bid_slot_ = -1;
+  best_ask_slot_ = -1;
+  num_bid_levels_ = 0;
+  num_ask_levels_ = 0;
+  id_index_.clear();
+  notify_(before);
 }
 
 } // namespace hft::core

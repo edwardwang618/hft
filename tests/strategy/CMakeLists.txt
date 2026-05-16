@@ -1,0 +1,10 @@
+add_executable(test_strategy
+  test_strategy.cpp
+)
+target_link_libraries(test_strategy
+  PRIVATE
+    hft_core
+    GTest::gtest_main
+)
+include(GoogleTest)
+gtest_discover_tests(test_strategy)
