@@ -5,6 +5,7 @@
 
 #include <hft/md/md_event.hpp>
 #include <hft/strategy/i_order_gateway.hpp>
+#include <string_view>
 
 namespace hft::strategy {
 
@@ -41,6 +42,22 @@ public:
   // Called for every passive execution visible in the feed.
   // 每次行情中可见的被动成交时调用。
   virtual void on_trade(md::SymbolId, Price, Qty, md::TradeId) noexcept {}
+
+  // ── Order lifecycle callbacks (called by OrderManager) ────────────
+  // 订单生命周期回调（由 OrderManager 调用）
+
+  // Exchange accepted our order. 交易所接受订单。
+  virtual void on_ack(OrderId /*clord_id*/, OrderId /*exch_id*/) noexcept {}
+
+  // Our order was filled (partially or fully). filled_qty = this fill only.
+  // 订单成交（部分或全部）。filled_qty 为本次成交量。
+  virtual void on_fill(OrderId /*clord_id*/, Qty /*filled_qty*/, Price /*px*/) noexcept {}
+
+  // Our cancel was confirmed. 撤单确认。
+  virtual void on_cancel_ack(OrderId /*clord_id*/) noexcept {}
+
+  // Our order was rejected before reaching the book. 订单在入簿前被拒。
+  virtual void on_reject(OrderId /*clord_id*/, std::string_view /*reason*/) noexcept {}
 
 protected:
   IOrderGateway &gateway_;

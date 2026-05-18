@@ -18,3 +18,13 @@ target_link_libraries(test_simple_quoter
     GTest::gtest_main
 )
 gtest_discover_tests(test_simple_quoter)
+
+add_executable(test_order_manager
+  test_order_manager.cpp
+)
+target_link_libraries(test_order_manager
+  PRIVATE
+    hft_core
+    GTest::gtest_main
+)
+gtest_discover_tests(test_order_manager)
