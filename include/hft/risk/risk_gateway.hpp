@@ -144,11 +144,10 @@ private:
   }
 
   bool check_notional(Price px, Qty qty) noexcept {
-    if (limits_.max_order_notional > 0 && px > 0) {
-      // Use __int128 to avoid overflow on large px*qty.
-      // 用 __int128 避免大 px*qty 溢出。
-      const __int128 notional = static_cast<__int128>(px) * qty;
-      if (notional > static_cast<__int128>(limits_.max_order_notional)) {
+    if (limits_.max_order_notional > 0 && px > 0 && qty > 0) {
+      // Overflow-safe: px * qty > limit ⟺ px > limit / qty for positive integers.
+      // 溢出安全：正整数情况下 px * qty > limit 等价于 px > limit / qty。
+      if (px > limits_.max_order_notional / qty) {
         ++rejected_notional_;
         return false;
       }

@@ -1,8 +1,8 @@
 // include/hft/oe/order_gateway.hpp
-// Concrete IOrderGateway: encodes orders → TCP → exchange.
-// Also drives OeDecoder from incoming TCP bytes.
-// 具体的 IOrderGateway 实现：将订单编码后经 TCP 发往交易所。
-// 同时驱动 OeDecoder 处理收到的 TCP 回报字节。
+// Concrete IOrderGateway: encodes orders → Session → exchange.
+// Also drives OeDecoder from incoming bytes via report_sink() or poll_reports().
+// 具体的 IOrderGateway 实现：将订单编码后经 Session 发往交易所。
+// 通过 report_sink() 或 poll_reports() 驱动 OeDecoder 处理回报字节。
 //
 // Fits into the two-thread model:
 //   Hot-path thread: calls send_new / send_cancel (encodes + send_all)
@@ -11,9 +11,15 @@
 // 适配两线程模型：
 //   热路径线程：调用 send_new / send_cancel（编码 + send_all）
 //   同一线程或独立轮询线程：循环调用 poll_reports()
+//
+// For in-process testing, use Session = InProcessSession and push execution
+// report bytes into report_sink() directly; poll_reports() is not needed.
+// 进程内测试时，使用 Session = InProcessSession，直接向 report_sink() 推送
+// 回报字节；无需调用 poll_reports()。
 #pragma once
 
 #include <hft/core/types.hpp>
+#include <hft/exchange/byte_sink.hpp>
 #include <hft/md/md_event.hpp>
 #include <hft/oe/oe_decoder.hpp>
 #include <hft/oe/oe_encoder.hpp>
@@ -26,15 +32,34 @@
 
 namespace hft::oe {
 
-class OrderGateway final : public strategy::IOrderGateway {
+template <typename Session = TcpSession>
+class OrderGatewayT final : public strategy::IOrderGateway {
 public:
   // listener: receives on_ack / on_fill / on_cancel_ack / on_reject
   //           (typically OrderManager)
-  // session:  caller owns the TcpSession; call session.connect() before use.
+  // session:  caller owns the Session; call session.connect() before use (TCP only).
   // 监听器接收 ACK/Fill/CancelAck/Reject 回调（通常是 OrderManager）。
-  // 调用方持有 TcpSession；使用前先调用 session.connect()。
-  OrderGateway(strategy::IOrderListener &listener, TcpSession &session)
+  // 调用方持有 Session；TCP 模式下使用前先调用 session.connect()。
+  OrderGatewayT(strategy::IOrderListener &listener, Session &session)
       : decoder_(listener), session_(session) {}
+
+  // Sink that pipes bytes directly into the OeDecoder.
+  // Used by ExchangeSimulator to push execution reports in-process.
+  // 将字节直接注入 OeDecoder 的 Sink，供 ExchangeSimulator 在进程内推送回报。
+  class DecoderSink final : public exchange::IByteSink {
+  public:
+    explicit DecoderSink(OeDecoder &dec) noexcept : dec_(dec) {}
+    void on_bytes(const std::byte *data, std::size_t n) noexcept override {
+      dec_.on_bytes(data, n);
+    }
+
+  private:
+    OeDecoder &dec_;
+  };
+
+  // Returns the sink that pipes execution report bytes into the OeDecoder.
+  // 返回将回报字节注入 OeDecoder 的 Sink。
+  exchange::IByteSink &report_sink() noexcept { return report_sink_; }
 
   // ── IOrderGateway ─────────────────────────────────────────────────
 
@@ -48,9 +73,9 @@ public:
 
   void send_cancel(OrderId clord_id) override {
     // exch_id not tracked here — caller (OrderManager) must provide it.
-    // This overload is a no-op placeholder; use send_cancel_with_exch_id.
+    // This overload is a no-op placeholder; use the extended send_cancel below.
     // exch_id 在此不追踪——调用方（OrderManager）需提供。
-    // 此重载为占位符；请使用 send_cancel_with_exch_id。
+    // 此重载为占位符；请使用下方带 exch_id 的扩展撤单接口。
     (void)clord_id;
   }
 
@@ -86,9 +111,14 @@ public:
 
 private:
   OeDecoder decoder_;
-  TcpSession &session_;
+  Session &session_;
   std::atomic<OrderId> next_id_{1};
   std::array<std::byte, OeEncoder::kMaxFrameSize> buf_{};
+  DecoderSink report_sink_{decoder_}; // must be declared after decoder_
 };
+
+// Production alias: concrete gateway over a real TCP connection.
+// 生产环境别名：基于真实 TCP 连接的具体网关。
+using OrderGateway = OrderGatewayT<TcpSession>;
 
 } // namespace hft::oe
