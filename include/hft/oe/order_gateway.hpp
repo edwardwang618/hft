@@ -23,7 +23,6 @@
 
 #include <array>
 #include <atomic>
-#include <cstdint>
 
 namespace hft::oe {
 
