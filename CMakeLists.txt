@@ -29,6 +29,12 @@ target_compile_features(hft_core INTERFACE cxx_std_20)
 # ─── GoogleTest (system package) ───────────────────────────────────────
 find_package(GTest REQUIRED)
 
+# ─── Production binary ─────────────────────────────────────────────────
+add_subdirectory(src)
+
+# ─── Tools (exchange simulator, bench) ─────────────────────────────────
+add_subdirectory(tools)
+
 # ─── Tests ─────────────────────────────────────────────────────────────
 enable_testing()
 add_subdirectory(tests)
